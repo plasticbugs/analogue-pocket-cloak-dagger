@@ -13,7 +13,7 @@ offset in and the core takes it out, and comparing them with it in place
 measures that and nothing else.
 
 Phase is NOT comparable and no attempt is made to compare it: this core runs
-the board's 61.04 Hz rather than MAME's round 60 (docs/verification.md 5.1), so
+the board's 61.04 Hz rather than MAME's round 60 (docs/verification.md 6.1), so
 the two drift 1.7% apart and the same note lands in a different place within
 seconds. That is why the default window is one second from the first sound, and
 why only the bands within 30 dB of the loudest are gated.

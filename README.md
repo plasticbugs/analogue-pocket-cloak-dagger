@@ -15,9 +15,11 @@ Nothing here is emulated in software.
 > **ROMs are not included and never will be.** You supply your own MAME
 > `cloak` romset; the core reads one image built from it.
 
-**Status: simulation-verified, not yet run on real hardware.** Every gate
-below is green in Verilator. It has not been loaded onto a Pocket. See
-"Open questions" for what that leaves unsettled.
+**Status: builds clean and every simulation gate is green; not yet run on real
+hardware.** Quartus 18.1 compiles it with 0 errors, fully constrained for
+setup and hold, no negative slack in any of its 104 timing checks — 20% of the
+ALMs, **50% of the block memory**, 12 DSP blocks. It has not been loaded onto a
+Pocket. See "Open questions" for what that leaves unsettled.
 
 |  |  |
 |---|---|

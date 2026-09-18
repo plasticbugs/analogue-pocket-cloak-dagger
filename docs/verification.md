@@ -104,9 +104,41 @@ file a player's F2 would have produced.
 
 ---
 
-## 5. Open questions
+## 5. The build
 
-### 5.1 Frame rate: 61.04 Hz, not MAME's 60
+Quartus 18.1.1 in Docker (`raetro/quartus:pocket`), the 5CEBA4F23C8 on the
+Pocket. Full compilation: **0 errors**, and the Timing Analyzer reports the
+design **fully constrained for both setup and hold** with **no negative slack in
+any of its 104 checks**.
+
+| resource | used | of | |
+|---|---|---|---|
+| ALMs | 3,753 | 18,480 | 20% |
+| block memory bits | 1,576,993 | 3,153,920 | **50%** |
+| M10K blocks | 201 | 308 | 65% |
+| DSP blocks | 12 | 66 | 18% |
+| PLLs | 2 | 4 | 50% |
+| registers | 5,100 | | |
+
+The memory figure is the one to watch, and it lands where section 7 of
+`docs/hardware.md` said it would: 1,576,993 bits against a prediction of
+~1,565,760. Half of that is the two 64 KB bitmap buffers.
+
+Worst slack on the 40 MHz system clock is **+7.88 ns** of a 25 ns period at the
+slow 85C corner, and +0.345 ns on hold. The T65 and POKEY multicycle exceptions
+in `projects/cloak_pocket.sdc` are what buy the setup margin; both CPUs advance
+on an enable every 32 or 40 cycles, so the constraint claims a quarter of the
+margin that is actually there.
+
+`./build-local.sh map` runs analysis and synthesis alone in under a minute and
+catches syntax and inference errors without paying for a fit; the full compile
+takes four.
+
+---
+
+## 6. Open questions
+
+### 6.1 Frame rate: 61.04 Hz, not MAME's 60
 
 The vertical timing PROM settles the vertical half absolutely: 256 lines, 232 of
 them active. The horizontal half is not in the romset and MAME does not model it
@@ -132,7 +164,7 @@ mode it shows as the demo's animation running a hair ahead of MAME's.
 If a horizontal timing PROM or a schematic ever settles this, the only thing to
 change is `HTOTAL` in `rtl/cloak_pkg.sv`.
 
-### 5.2 The master CPU clock
+### 6.2 The master CPU clock
 
 MAME runs the master at 1.000 MHz and the slave at 1.250 MHz and flags both
 `????`. Both POKEYs sit on the **master's** bus, and a POKEY's single clock pin
@@ -143,7 +175,7 @@ the master 1.25 MHz too.
 The core follows MAME until this is settled, because MAME is what every gate
 diffs against. Changing it is one constant in `rtl/cloak_core.sv`.
 
-### 5.3 Things MAME does not model, and neither does this
+### 6.3 Things MAME does not model, and neither does this
 
 * **3e00 bit 0**, the NVRAM write enable. MAME latches it and never uses it.
   Gating writes on it is not something the oracle can confirm, so it is left
@@ -153,7 +185,7 @@ diffs against. Changing it is one constant in `rtl/cloak_core.sv`.
 * **The watchdog.** The kick at 3a00 is decoded and discarded. A watchdog can
   only ever mask a fault in a core this size, never fix one.
 
-### 5.4 The bitmap clear
+### 6.4 The bitmap clear
 
 A 65536-pixel clear cannot be instantaneous on hardware, and MAME's is a
 `memset`. Measured in MAME: clears are rare (0.12 per frame) but **35 of 36 are
@@ -164,9 +196,9 @@ atomic, and about 1% of the slave's time averaged over a session.
 
 ---
 
-## 6. Audio
+## 7. Audio
 
-### 6.1 The level is right
+### 7.1 The level is right
 
 `sim/run_audio_unit.sh` recomputes MAME's `vol_init` ladder in the bench itself
 and checks the core's settled output against
@@ -189,7 +221,7 @@ conversion saturates. The core saturates at the same point; matching the oracle
 here means matching its clipping, and the bench asserts that rather than
 quietly scaling the output down.
 
-### 6.2 The bug the end-to-end bench could not have caught
+### 7.2 The bug the end-to-end bench could not have caught
 
 The first audio comparison ran fifteen seconds of attract against MAME and
 reported the two identical to within 0.1 dB in every band. It was comparing one
@@ -208,7 +240,7 @@ passes on silence is not evidence. `tools/capture_audio.sh` therefore drives a
 coin and a start and records the game's opening, where there is actually
 something to measure.
 
-### 6.3 The whole machine against a MAME recording
+### 7.3 The whole machine against a MAME recording
 
 `tools/capture_audio.sh` drives MAME through a coin at frame 120 and a start at
 frame 200 and records the game's opening; `sim/run_audio.sh` drives the core
@@ -246,9 +278,25 @@ This material is a sequence of effects, not a steady tone. Sliding the window
 The core and MAME are ~17 ms apart by the end of a one-second window, so any
 per-band difference under about 6 dB says nothing. Peak and RMS are stable
 against that shift, so they are what the gate uses; the exact level check is
-section 6.1's, against MAME's own expression rather than against a recording.
+section 7.1's, against MAME's own expression rather than against a recording.
 
-### 6.4 What is still open
+### 7.4 Two menu entries that are new to this series
+
+`interact.json` uses two framework addresses that none of the sibling cores
+expose, so they are the likeliest things to be wrong the first time this runs on
+a Pocket:
+
+* **0xF0000010, "Self-Test Switch".** `interact.sv` latches bit 0 into `svc_mode`
+  *and* starts a reset, which is exactly what this game needs: the self-test
+  switch is read once during power-on and never polled again, so it has to be on
+  before the machine boots. The entry is `persist: false`, so it is Off at the
+  start of every session rather than trapping someone in the test.
+* **0xF0000020, "Clear Settings & Scores".** Raises `nvclear_sw` for a reset
+  window; `cloak_main` sweeps the 512-byte NVRAM to zero on the CPU port while
+  that is high (512 writes, 13 us) and toggles `nv_dirty` at the end so the wipe
+  is written back to the .sav rather than coming straight back on the next load.
+
+### 7.5 What is still open
 
 Nothing has been listened to on hardware, and the output has not been checked
 against a recording of a real board -- only against MAME, which is a model of

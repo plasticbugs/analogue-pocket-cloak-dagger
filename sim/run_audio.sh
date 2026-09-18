@@ -2,7 +2,7 @@
 # Audio bench: run the machine from power-on through a coin and a start, record
 # every sample the core produces, and compare it against MAME's recording of
 # the same sequence. Aligned on the first sound rather than on time zero,
-# because the two run at different frame rates (docs/verification.md 5.1).
+# because the two run at different frame rates (docs/verification.md 6.1).
 #   sim/run_audio.sh [frames]        (default 1500)
 # tools/capture_audio.sh writes the MAME side.
 set -e
