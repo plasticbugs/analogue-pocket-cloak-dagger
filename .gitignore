@@ -111,3 +111,7 @@ sim/obj_*/
 sim/*.log
 **/.DS_Store
 /cfg/
+
+# Verilator object dirs for this core's benches
+sim/obj_video/
+sim/obj_*/
