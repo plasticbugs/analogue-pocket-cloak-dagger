@@ -1,0 +1,54 @@
+<misterromdescription>
+    <name>Cloak &amp; Dagger</name>
+    <setname>cloak</setname>
+    <year>1983</year>
+    <manufacturer>Atari</manufacturer>
+    <category>Arcade</category>
+    <rbf>cloak</rbf>
+
+    <!-- Image format 1 (docs/hardware.md section 7): a 256-byte header, then
+         each region laid out exactly as MAME's, minus the unpopulated space
+         at the bottom of the two CPU regions (the core adds the offset back).
+
+           0x00000     256  header: "CLDG", format 1, game id, flags, name
+           0x00100   49152  master 6502 program, MAME "maincpu" 0x4000-0xffff
+           0x0c100   57344  slave 6502 program,  MAME "slave"   0x2000-0xffff
+           0x1a100    8192  characters,          MAME "chars"
+           0x1c100    8192  motion objects,      MAME "sprites"
+           0x1e100     256  vertical timing PROM 136023-116, MAME "proms"
+           0x1e200          total
+    -->
+    <rom index="0" zip="cloak.zip" md5="8048e9415254b1cd6692f4165ffaa3b7">
+
+        <!-- header: magic, format 1, game 0, flags 0, name -->
+        <part>43 4c 44 47 01 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part>43 4c 4f 41 4b 20 26 20 44 41 47 47 45 52 00 00</part>
+        <part repeat="224">00</part>
+
+        <!-- master 6502: 4000-5fff, 6000-7fff, 8000-bfff, c000-ffff -->
+        <part name="136023-501.bin" crc="c2dbef1b"/>
+        <part name="136023-502.bin" crc="316d0c7b"/>
+        <part name="136023-503.bin" crc="b9c291a6"/>
+        <part name="136023-504.bin" crc="d014a1c0"/>
+
+        <!-- slave 6502: 2000-ffff in 8 KB steps -->
+        <part name="136023-509.bin" crc="46c021a4"/>
+        <part name="136023-510.bin" crc="8c9cf017"/>
+        <part name="136023-511.bin" crc="66fd8a34"/>
+        <part name="136023-512.bin" crc="48c8079e"/>
+        <part name="136023-513.bin" crc="13f1cbab"/>
+        <part name="136023-514.bin" crc="6f8c7991"/>
+        <part name="136023-515.bin" crc="835438a0"/>
+
+        <!-- characters -->
+        <part name="136023-105.bin" crc="ee443909"/>
+        <part name="136023-106.bin" crc="d708b132"/>
+
+        <!-- motion objects -->
+        <part name="136023-107.bin" crc="c42c84a4"/>
+        <part name="136023-108.bin" crc="4fe13d58"/>
+
+        <!-- vertical timing PROM (82S129): bit 1 = /VSYNC, bit 0 = active video -->
+        <part name="136023-116.3n" crc="ef2668e5"/>
+    </rom>
+</misterromdescription>
