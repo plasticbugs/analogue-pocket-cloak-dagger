@@ -27,10 +27,7 @@ Pocket. See "Open questions" for what that leaves unsettled.
 | ![Maze](docs/img/maze.png) | ![Level 2](docs/img/level2.png) |
 
 All four are the core's own output: 256x232 frames captured from
-`cloak_core` running in Verilator (`sim/run_system.sh`), not from MAME. The
-Pocket artwork is cut from the same raster — `tools/capture_title.sh` finds
-the title screen in the attract loop and `tools/make_images.py` slices the
-platform banner and the icon out of it at 1:1.
+`cloak_core` running in Verilator (`sim/run_system.sh`), not from MAME.
 
 ## Installing
 

@@ -1,6 +1,8 @@
 #!/bin/sh
-# Find the title screen in the attract loop and regenerate the Pocket artwork
-# from it, so both assets come from the game's own raster rather than a redraw.
+# Find the title screen in the attract loop and cut the Pocket artwork's source
+# images out of it, so they come from the game's own raster rather than a
+# redraw. Writes PNGs into build/art/ only -- the shipped .bin assets are a
+# proprietary format, produced elsewhere and committed.
 #   tools/capture_title.sh
 set -e
 cd "$(dirname "$0")/.."
@@ -39,4 +41,4 @@ if best[1] is None:
 print('title frame:', best[1])
 open('build/title.png', 'wb').write(open(best[1], 'rb').read())
 PY
-python3 tools/make_images.py build/title.png --preview
+python3 tools/make_images.py build/title.png

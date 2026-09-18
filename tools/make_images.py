@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
-"""Build the Pocket artwork from the game's own title screen.
+"""Cut the Pocket artwork's source images out of the game's own title screen.
 
-Both Pocket image assets are raw 16-bit, little-endian, five bits per gun with
-the top bit unused -- `(r << 10) | (g << 5) | b`:
+This writes **PNGs only**. The Pocket's `.bin` image assets are a proprietary
+format -- decoding one as 5-5-5 or 5-6-5, little- or big-endian, gives
+convincing noise every time -- and the shipped
+`pkg/pocket/Platforms/_images/cloak.bin` and
+`pkg/pocket/Cores/<core>/icon.bin` are produced elsewhere and committed. An
+earlier version of this script wrote `.bin` files in a format of its own
+invention; it does not any more, and it will not overwrite the real assets.
 
-    pkg/pocket/Platforms/_images/cloak.bin   521 x 165  the platform banner
-    pkg/pocket/Cores/<core>/icon.bin          36 x 36   the core's icon
+What it does give you is the two crops at the right sizes, at 1:1 with the
+arcade raster so every pixel is one the board drew:
 
-Both are 1:1 crops of the arcade raster -- no scaling anywhere, so every pixel
-is one the board drew. The banner is 165 rows of the 256-wide frame centred on
-the black the game itself puts around the logo; the icon is the 36x36 square
-around the agent crouching between the two words.
+    build/art/platform_521x165.png   the platform banner: 165 rows of the
+                                     256-wide frame, centred on the black the
+                                     game itself puts around the logo
+    build/art/icon_36x36.png         the 36x36 square around the agent
+                                     crouching between the two words
 
-    tools/make_images.py <title-screen.png> [--out pkg/pocket] [--preview]
+Convert those to `.bin` with whatever tool produces the Pocket's format.
+
+    tools/make_images.py <title-screen.png> [--out build/art]
 
 tools/capture_title.sh finds the title frame in the attract loop and hands it
-over, so the whole thing regenerates from a romset in about a minute.
+over.
 """
-import sys, os, struct, argparse
+import sys, os, argparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pngio
@@ -30,18 +38,6 @@ ICON_W, ICON_H = 36, 36
 # --preview.
 BANNER_ROW0 = 40          # 165 rows from here: the logo and its red side bars
 ICON_X, ICON_Y, ICON_SRC = 106, 94, 36   # the agent between CLOAK and DAGGER, 1:1
-
-
-def pack555(r, g, b):
-    """8-bit RGB -> the Pocket's little-endian 5-5-5 word."""
-    return struct.pack('<H', ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3))
-
-
-def write_bin(path, w, h, rgb):
-    with open(path, 'wb') as f:
-        for i in range(w * h):
-            f.write(pack555(rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]))
-    return w * h * 2
 
 
 def make_banner(sw, sh, src):
@@ -75,9 +71,7 @@ def make_icon(sw, sh, src):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('title', help='a PNG of the title screen (256x232)')
-    ap.add_argument('--out', default='pkg/pocket')
-    ap.add_argument('--core', default='plasticbugs.cloak')
-    ap.add_argument('--preview', action='store_true', help='also write PNGs next to the .bin files')
+    ap.add_argument('--out', default='build/art')
     args = ap.parse_args()
 
     sw, sh, src = pngio.read(args.title)
@@ -87,18 +81,15 @@ def main():
     banner = make_banner(sw, sh, src)
     icon = make_icon(sw, sh, src)
 
-    bpath = os.path.join(args.out, 'Platforms', '_images', 'cloak.bin')
-    ipath = os.path.join(args.out, 'Cores', args.core, 'icon.bin')
-    os.makedirs(os.path.dirname(bpath), exist_ok=True)
-    os.makedirs(os.path.dirname(ipath), exist_ok=True)
-    nb = write_bin(bpath, BANNER_W, BANNER_H, banner)
-    ni = write_bin(ipath, ICON_W, ICON_H, icon)
-    print(f'wrote {bpath} ({nb} bytes, {BANNER_W}x{BANNER_H})')
-    print(f'wrote {ipath} ({ni} bytes, {ICON_W}x{ICON_H})')
-    if args.preview:
-        pngio.write(bpath[:-4] + '_preview.png', BANNER_W, BANNER_H, banner)
-        pngio.write(ipath[:-4] + '_preview.png', ICON_W, ICON_H, icon)
-        print('wrote previews alongside')
+    os.makedirs(args.out, exist_ok=True)
+    bpath = os.path.join(args.out, 'platform_521x165.png')
+    ipath = os.path.join(args.out, 'icon_36x36.png')
+    pngio.write(bpath, BANNER_W, BANNER_H, banner)
+    pngio.write(ipath, ICON_W, ICON_H, icon)
+    print(f'wrote {bpath} ({BANNER_W}x{BANNER_H})')
+    print(f'wrote {ipath} ({ICON_W}x{ICON_H})')
+    print('these are source images only -- the shipped .bin assets are a '
+          'proprietary format and are committed, not generated here')
 
 
 if __name__ == '__main__':
