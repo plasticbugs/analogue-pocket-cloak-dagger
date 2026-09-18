@@ -116,3 +116,4 @@ sim/*.log
 sim/obj_video/
 sim/obj_*/
 /artifacts/
+/release/pocket/

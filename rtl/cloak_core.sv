@@ -23,6 +23,8 @@ module cloak_core
 (
     input  logic        clk_sys,        // 40 MHz
     input  logic        reset,
+    input  logic        pix_sync,       // one clock after the platform's dot clock edge
+    input  logic        pause,          // the Pocket's menu is open: freeze the machine
 
     // ---- image load (the .rom built by tools/mra_build.py) ------------------
     input  logic        ioctl_wr,
@@ -38,6 +40,7 @@ module cloak_core
     input  logic        coin1, coin2,
     input  logic        service, test,
     input  logic  [7:0] dsw,
+    input  logic        nvclear,        // menu: wipe the NVRAM while the core is held in reset
 
     // ---- options -----------------------------------------------------------
     input  logic        dcblock_en,
@@ -96,6 +99,11 @@ module cloak_core
     // =========================================================================
     // clock enables
     // =========================================================================
+    // The pixel divider is restarted from the platform's own dot clock edge so
+    // the scaler samples away from the pixel's transition; pix_sync is a pulse
+    // two clocks after that edge, and setting the divider to 6 here puts
+    // cen_pix three clocks later -- about half a pixel in, which is where the
+    // sample wants to land.
     logic [2:0] div_pix;
     logic [4:0] div_slv;
     logic [5:0] div_mst;
@@ -104,14 +112,16 @@ module cloak_core
         if (reset) begin
             div_pix <= '0; div_slv <= '0; div_mst <= '0;
         end else begin
-            div_pix <= div_pix + 3'd1;
+            div_pix <= pix_sync ? 3'd6 : (div_pix + 3'd1);
             div_slv <= div_slv + 5'd1;
             div_mst <= (div_mst == 6'd39) ? 6'd0 : (div_mst + 6'd1);
         end
     end
     assign cen_pix     = (div_pix == 3'd0);
-    assign cen_slave   = (div_slv == 5'd0);
-    assign cen_master  = (div_mst == 6'd0);
+    // The menu freezes both CPUs and the sound chips; the beam keeps running so
+    // the picture stays on screen.
+    assign cen_slave   = (div_slv == 5'd0) && !pause;
+    assign cen_master  = (div_mst == 6'd0) && !pause;
     assign cen_pix_out = cen_pix;
 
     // =========================================================================
@@ -193,6 +203,7 @@ module cloak_core
         .pal_addr(pal_addr), .pal_we(pal_we), .pal_wdata(pal_wdata),
         .shr_addr(m_shr_addr), .shr_we(m_shr_we), .shr_wdata(m_shr_wdata), .shr_rdata(m_shr_rdata),
         .in_p1(in_p1), .in_system(in_system), .in_start(in_start), .in_dsw(dsw),
+        .nvclear(nvclear),
         .video_active(video_active),
         .flip(flip), .coin_counter(coin_counter), .start_led(start_led),
         .nv_addr(nv_addr), .nv_we(nv_we), .nv_wdata(nv_wdata), .nv_rdata(nv_rdata),

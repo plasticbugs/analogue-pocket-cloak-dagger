@@ -1,5 +1,5 @@
 ################################################################################
-# Compile the Atari System 2 Pocket core and upload the SD-card package.
+# Compile the Cloak & Dagger Pocket core and upload the SD-card package.
 # Runs on every push to main or multigame, on tags, and on manual dispatch.
 ################################################################################
 name: Compile Core
@@ -7,7 +7,7 @@ name: Compile Core
 on:
   workflow_dispatch:
   push:
-    branches: [main, multigame]
+    branches: [main]
     tags: ["v*"]
 
 jobs:
@@ -22,6 +22,9 @@ jobs:
 
       - name: Lint the RTL
         run: ./sim/lint.sh
+
+      - name: Lint the whole Pocket build (apf_top down)
+        run: ./sim/lint_platform.sh
 
   compile:
     runs-on: ubuntu-latest
@@ -44,30 +47,31 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/build -w /build \
             raetro/quartus:pocket \
-            quartus_sh --flow compile projects/ssprint_pocket.qpf
+            quartus_sh --flow compile projects/cloak_pocket.qpf
 
       - name: Package for Pocket
         run: python3 package-pocket.py
 
       - name: Show resource summary
-        run: cat projects/output_files/ssprint_pocket.fit.summary || true
+        run: cat projects/output_files/cloak_pocket.fit.summary || true
 
       - name: Check block RAM fits
         run: |
-          fit=projects/output_files/ssprint_pocket.fit.summary
+          fit=projects/output_files/cloak_pocket.fit.summary
           echo "--- resource use ---"
           grep -E 'logic utilization|block memory|Total RAM|registers' "$fit" || true
-          # The banked program ROM and the graphics are in SDRAM so the rest fits; if the
-          # memory bits ever creep past the device, say so here rather than
+          # There is no SDRAM in this core: the whole machine, both 64 KB
+          # bitmap buffers included, is about 1.6 Mbit of the device's 3.08.
+          # If that ever creeps past the device, say so here rather than
           # discovering it as a mysterious fit failure.
           if grep -qi 'block memory bits.*: *[0-9,]*/ *[0-9,]* *( *9[5-9]%' "$fit"; then
-            echo "block RAM above 95% -- something has moved out of SDRAM"
+            echo "block RAM above 95% -- the memory budget has been broken"
             exit 1
           fi
 
       - name: Check timing closed
         run: |
-          sta=projects/output_files/ssprint_pocket.sta.summary
+          sta=projects/output_files/cloak_pocket.sta.summary
           echo "--- worst slack per corner ---"
           grep -B3 'Slack' "$sta" | grep -E 'Type|Slack' | paste - - | head -20
           if grep -q 'Slack : -' "$sta"; then
@@ -87,7 +91,7 @@ jobs:
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: atarisy2-pocket
+          name: cloak-pocket
           path: release/pocket/
           if-no-files-found: error
 
@@ -103,11 +107,11 @@ jobs:
             echo "release ${GITHUB_REF_NAME} already published; skipping"
             exit 0
           fi
-          cd release/pocket && zip -qr ../../atarisy2-pocket-sdcard.zip . && cd ../..
+          cd release/pocket && zip -qr ../../cloak-pocket-sdcard.zip . && cd ../..
           gh release create "${GITHUB_REF_NAME}" \
-            --title "Atari System 2 for Analogue Pocket ${GITHUB_REF_NAME}" \
-            --notes "Unzip onto the Pocket SD card root, overwriting previous files. Build the ROM images with mra_build.py (ssprint, apb, csprint, paperboy, 720) and put them in Assets/atarisy2/common/." \
-            atarisy2-pocket-sdcard.zip
+            --title "Cloak & Dagger for Analogue Pocket ${GITHUB_REF_NAME}" \
+            --notes "Unzip onto the Pocket SD card root, overwriting previous files. Build the ROM image with mra_build.py from your own MAME cloak romset and put cloak.rom in Assets/cloak/common/." \
+            cloak-pocket-sdcard.zip
 
       - name: Upload reports
         if: always()

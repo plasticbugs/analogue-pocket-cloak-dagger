@@ -1,0 +1,52 @@
+{
+    "input": {
+        "magic": "APF_VER_1",
+        "controllers": [
+            {
+                "type": "default",
+                "mappings": [
+                    {
+                        "id": 100,
+                        "name": "Fire down",
+                        "key": "pad_btn_b"
+                    },
+                    {
+                        "id": 101,
+                        "name": "Fire right",
+                        "key": "pad_btn_a"
+                    },
+                    {
+                        "id": 102,
+                        "name": "Fire up",
+                        "key": "pad_btn_x"
+                    },
+                    {
+                        "id": 103,
+                        "name": "Fire left",
+                        "key": "pad_btn_y"
+                    },
+                    {
+                        "id": 104,
+                        "name": "Igniter",
+                        "key": "pad_trig_l"
+                    },
+                    {
+                        "id": 105,
+                        "name": "Igniter (alt)",
+                        "key": "pad_trig_r"
+                    },
+                    {
+                        "id": 106,
+                        "name": "Coin",
+                        "key": "pad_btn_select"
+                    },
+                    {
+                        "id": 107,
+                        "name": "Start",
+                        "key": "pad_btn_start"
+                    }
+                ]
+            }
+        ]
+    }
+}

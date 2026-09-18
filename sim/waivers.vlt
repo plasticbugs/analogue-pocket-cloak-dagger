@@ -20,3 +20,8 @@ lint_off -rule UNUSEDSIGNAL -file "*rtl/cloak_main.sv"
 // core_rst is generated synchronously from clk_sys and then used as T65's
 // asynchronous Res_n, which is what that core wants.
 lint_off -rule SYNCASYNCNET -file "*rtl/cloak_core.sv"
+// The Pocket framework's own sources, linted only for connectivity: data_io
+// continuously assigns a variable that has an initial value, which Quartus is
+// happy with and Verilator calls an error.
+lint_off -rule CONTASSINIT -file "*platform/pocket/*"
+lint_off -file "*platform/pocket/*"

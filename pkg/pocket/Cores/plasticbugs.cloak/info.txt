@@ -1,0 +1,35 @@
+Cloak & Dagger (Atari, 1983)
+
+Agent X raids Dr. Boom's underground
+bomb factory. Walk with one hand,
+fire with the other.
+
+* two 6502s: one runs the game, one
+  does nothing but draw into a
+  256x256 bitmap through an auto-
+  incrementing address generator
+* two POKEYs into op-amp summing
+  stages, modelled from the ladder
+  up rather than as a linear mixer
+* 256x232 at 61.04 Hz, the board's
+  own rate, off its timing PROM
+* settings and high scores are kept
+  in the machine's real 512-byte
+  NVRAM and saved to cloak.sav
+
+Controls
+  D-pad     walk
+  X A B Y   fire up right down left
+            (two at once = diagonal)
+  L or R    igniter
+  Select    coin
+  Start     start
+
+ROMs are not included. Build the
+image from your own MAME romset:
+
+  python3 mra_build.py cloak.mra
+      cloak.zip
+
+and copy cloak.rom into
+Assets/cloak/common/.

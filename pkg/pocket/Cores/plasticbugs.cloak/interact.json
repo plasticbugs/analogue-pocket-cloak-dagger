@@ -1,0 +1,199 @@
+{
+  "interact": {
+    "magic": "APF_VER_1",
+    "variables": [
+      {
+        "name": "Reset Core",
+        "id": 0,
+        "type": "action",
+        "enabled": true,
+        "address": "0xF0000000",
+        "value": 1
+      },
+      {
+        "name": "Screen Shape",
+        "id": 10,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF2000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFFF9",
+        "options": [
+          {
+            "name": "Arcade 4:3",
+            "value": "0x00000000"
+          },
+          {
+            "name": "Fill Screen",
+            "value": "0x00000002"
+          }
+        ]
+      },
+      {
+        "name": "Credits",
+        "id": 20,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF1000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFFFC",
+        "options": [
+          {
+            "name": "1 Credit / 1 Game",
+            "value": "0x00000000"
+          },
+          {
+            "name": "1 Credit / 2 Games",
+            "value": "0x00000003"
+          },
+          {
+            "name": "2 Credits / 1 Game",
+            "value": "0x00000001"
+          },
+          {
+            "name": "Free Play",
+            "value": "0x00000002"
+          }
+        ]
+      },
+      {
+        "name": "Coin A (left slot)",
+        "id": 21,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF1000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFFEF",
+        "options": [
+          {
+            "name": "1 Coin / 1 Credit",
+            "value": "0x00000000"
+          },
+          {
+            "name": "1 Coin / 2 Credits",
+            "value": "0x00000010"
+          }
+        ]
+      },
+      {
+        "name": "Coin B (right slot)",
+        "id": 22,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF1000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFFF3",
+        "options": [
+          {
+            "name": "1 Coin / 1 Credit",
+            "value": "0x00000000"
+          },
+          {
+            "name": "1 Coin / 4 Credits",
+            "value": "0x00000004"
+          },
+          {
+            "name": "1 Coin / 5 Credits",
+            "value": "0x00000008"
+          },
+          {
+            "name": "1 Coin / 6 Credits",
+            "value": "0x0000000C"
+          }
+        ]
+      },
+      {
+        "name": "Demo Freeze Mode",
+        "id": 23,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF1000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFFBF",
+        "options": [
+          {
+            "name": "Off",
+            "value": "0x00000000"
+          },
+          {
+            "name": "On",
+            "value": "0x00000040"
+          }
+        ]
+      },
+      {
+        "name": "Self-Test Switch",
+        "id": 30,
+        "type": "list",
+        "enabled": true,
+        "persist": false,
+        "address": "0xF0000010",
+        "defaultval": 0,
+        "mask": "0xFFFFFFFE",
+        "options": [
+          {
+            "name": "Off",
+            "value": "0x00000000"
+          },
+          {
+            "name": "On",
+            "value": "0x00000001"
+          }
+        ]
+      },
+      {
+        "name": "Audio DC Blocker",
+        "id": 40,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF2000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFFFE",
+        "options": [
+          {
+            "name": "On",
+            "value": "0x00000000"
+          },
+          {
+            "name": "Off (as MAME)",
+            "value": "0x00000001"
+          }
+        ]
+      },
+      {
+        "name": "Debug Overlay",
+        "id": 41,
+        "type": "list",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF2000000",
+        "defaultval": 0,
+        "mask": "0xFFFFFF7F",
+        "options": [
+          {
+            "name": "Off",
+            "value": "0x00000000"
+          },
+          {
+            "name": "On",
+            "value": "0x00000080"
+          }
+        ]
+      },
+      {
+        "name": "Clear Settings & Scores",
+        "id": 31,
+        "type": "action",
+        "enabled": true,
+        "address": "0xF0000020",
+        "value": 1
+      }
+    ]
+  }
+}

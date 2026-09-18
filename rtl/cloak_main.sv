@@ -51,6 +51,7 @@ module cloak_main (
     input  logic  [7:0] in_start,       // POKEY 1 ALLPOT
     input  logic  [7:0] in_dsw,         // POKEY 2 ALLPOT
     input  logic        video_active,   // SYSTEM bit 0
+    input  logic        nvclear,        // wipe the NVRAM (held high through a reset window)
 
     // ---- 74LS259 outputs ----------------------------------------------------
     output logic        flip,
@@ -157,16 +158,34 @@ module cloak_main (
         rom_q <= rom[rom_ra];
     end
 
-    // NVRAM: the 6502 on one port, the Pocket's save slot on the other
+    // NVRAM: the 6502 on one port, the Pocket's save slot on the other.
+    // The menu's "Clear Settings & Scores" sweeps it to zero on the CPU port
+    // while the core is held in reset -- 512 writes, 13 us -- and toggles
+    // nv_dirty at the end so the wipe is written back to the .sav rather than
+    // coming straight back the next time the game is loaded.
+    logic [8:0] nvclr_addr;
+    logic       nvclr_run;
+    always_ff @(posedge clk) begin
+        if (nvclear && !nvclr_run && nvclr_addr == 9'd0) nvclr_run <= 1'b1;
+        else if (nvclr_run) begin
+            nvclr_addr <= nvclr_addr + 9'd1;
+            if (nvclr_addr == 9'd511) nvclr_run <= 1'b0;
+        end else if (!nvclear) begin
+            nvclr_addr <= 9'd0;
+        end
+    end
+    wire       nv_cpu_we   = nvclr_run ? 1'b1        : (cpu_wr && sel_nv);
+    wire [8:0] nv_cpu_addr = nvclr_run ? nvclr_addr  : A[8:0];
+    wire [7:0] nv_cpu_wd   = nvclr_run ? 8'h00       : cpu_do;
     logic [7:0] nvq_cpu;
     tdpram #(.AW(9), .DW(8)) u_nvram (
         .clk(clk),
-        .a_addr(A[8:0]),  .a_we(cpu_wr && sel_nv), .a_wdata(cpu_do),  .a_rdata(nvq_cpu),
-        .b_addr(nv_addr), .b_we(nv_we),            .b_wdata(nv_wdata), .b_rdata(nv_rdata)
+        .a_addr(nv_cpu_addr), .a_we(nv_cpu_we), .a_wdata(nv_cpu_wd), .a_rdata(nvq_cpu),
+        .b_addr(nv_addr),     .b_we(nv_we),     .b_wdata(nv_wdata),  .b_rdata(nv_rdata)
     );
     always_ff @(posedge clk) begin
-        if (reset) nv_dirty <= 1'b0;
-        else if (cpu_wr && sel_nv) nv_dirty <= ~nv_dirty;
+        if (cpu_wr && sel_nv) nv_dirty <= ~nv_dirty;
+        else if (nvclr_run && nvclr_addr == 9'd511) nv_dirty <= ~nv_dirty;
     end
 
     // -------------------------------------------------------------------------

@@ -91,6 +91,9 @@ int main(int argc, char **argv) {
     dut->p1_right_up = dut->p1_right_down = dut->p1_right_left = dut->p1_right_right = 0;
     dut->p1_button = dut->start1 = dut->start2 = dut->coin1 = dut->coin2 = 0;
     dut->service = dut->test = 0;
+    dut->pause = 0;
+    dut->pix_sync = 0;      // the bench drives cen_pix itself; no platform clock here
+    dut->nvclear = 0;
     dut->dsw = 0x02;                        // MAME's defaults: 1 credit / 1 game
     dut->dcblock_en = 1;
     dut->nv_addr = 0; dut->nv_we = 0; dut->nv_wdata = 0;

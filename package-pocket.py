@@ -11,13 +11,11 @@ fails the package if one slipped through anyway.
 import os, shutil, sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-RBF = os.path.join(ROOT, "projects", "output_files", "ssprint_pocket.rbf")
+RBF = os.path.join(ROOT, "projects", "output_files", "cloak_pocket.rbf")
 PKG = os.path.join(ROOT, "pkg", "pocket")
 OUT = os.path.join(ROOT, "release", "pocket")
-CORE_ID = "plasticbugs.atarisy2"
-PLATFORM_ID = "atarisy2"
-# the games the core lists: one instance JSON each (Assets/<platform>/<core>/)
-INSTANCES = ["Super Sprint.json", "APB - All Points Bulletin.json", "Championship Sprint.json", "Paperboy.json", "720 Degrees.json"]
+CORE_ID = "plasticbugs.cloak"
+PLATFORM_ID = "cloak"
 
 if not os.path.exists(RBF):
     sys.exit(f"missing {RBF} - run the Quartus compile first "
@@ -36,8 +34,8 @@ with open(os.path.join(core_dir, "bitstream.rbf_r"), "wb") as f:
     f.write(reversed_rbf)
 
 # Ship the ROM recipe and its builder alongside the core, so a downloaded
-# release contains everything needed to produce ssprint.rom.
-for extra in ("ssprint.mra", "apb.mra", "csprint.mra", "paperboy.mra", "720.mra", "README.md", os.path.join("tools", "mra_build.py")):
+# release contains everything needed to produce cloak.rom.
+for extra in ("cloak.mra", "README.md", os.path.join("tools", "mra_build.py")):
     src = os.path.join(ROOT, extra)
     if os.path.exists(src):
         shutil.copy(src, os.path.join(OUT, os.path.basename(extra)))
@@ -85,12 +83,17 @@ if len(compact) > 7000 or longest > 3000:
 with open(os.path.join(core_dir, "interact.json"), "w") as f:
     f.write(compact)
 
-# Backstop: the instance JSONs are how the Pocket lists the games. Losing one
-# reads as a missing game, which looks like a core bug rather than packaging.
-inst_dir = os.path.join(OUT, "Assets", PLATFORM_ID, CORE_ID)
-missing = [n for n in INSTANCES if not os.path.exists(os.path.join(inst_dir, n))]
-if missing:
-    sys.exit("refusing to package, instance JSON missing:\n  " + "\n  ".join(missing))
+# Backstop: the Pocket auto-loads the single ROM slot by the filename in
+# data.json, so there are no instance JSONs here -- but the Assets directory
+# still has to exist or the Pocket has nowhere to look for cloak.rom.
+inst_dir = os.path.join(OUT, "Assets", PLATFORM_ID, "common")
+os.makedirs(inst_dir, exist_ok=True)
+
+# Backstop: the previews make_images.py writes are for looking at, not shipping.
+for dp, _, fs in os.walk(OUT):
+    for f in fs:
+        if f.endswith("_preview.png"):
+            os.remove(os.path.join(dp, f))
 
 # Backstop: a gitignored test ROM in the package tree must never reach a release.
 strays = [os.path.join(dp, f) for dp, _, fs in os.walk(OUT) for f in fs
@@ -100,5 +103,5 @@ if strays:
 
 print(f"packaged -> {OUT}")
 print("copy Cores/, Platforms/ and Assets/ from that folder onto the SD card root")
-print(f"games listed: {', '.join(n[:-5] for n in INSTANCES)}  (ROM images go in Assets/{PLATFORM_ID}/common/)")
-print("build the ROMs with:  python3 mra_build.py <game>.mra <game>.zip  for ssprint, apb, csprint, paperboy, 720")
+print(f"the ROM image goes in Assets/{PLATFORM_ID}/common/cloak.rom")
+print("build it with:  python3 mra_build.py cloak.mra cloak.zip")
