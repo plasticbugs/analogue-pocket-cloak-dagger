@@ -15,6 +15,7 @@ constantly.
 | `sim/run_selftest.sh` | the whole machine -- both 6502s, the memory map, the communication RAM, the video -- reproduces MAME frame for frame through the game's own power-on self-test | ~60 s |
 | `sim/run_audio_unit.sh` | `cloak_audio`'s output level against MAME's own op-amp expression, plus the decimator and the DC blocker | ~4 s |
 | `sim/run_audio.sh` | the whole machine's sound against a MAME recording of the same sequence | ~3 min |
+| `sim/run_gameplay.sh` | both machines through the same coin and start, diffed frame by frame | ~3 min |
 | `sim/lint.sh` | Verilator over the whole core | ~1 s |
 
 All four are green. The video gates are at **zero differing pixels**, not "close".
@@ -104,7 +105,46 @@ file a player's F2 would have produced.
 
 ---
 
-## 5. The build
+## 5. Free-running gameplay, and the limit of comparing against MAME
+
+`tools/capture_gameplay.sh` and `sim/run_gameplay.sh` put both machines through
+the same coin and start from power-on and diff every captured frame. Through
+the first 21 seconds -- the attract tail, the difficulty select, the mission
+briefing and the level-entry screen -- **34 of 43 frames are identical**. The
+nine that are not differ by 0.16% to 2.06% of the picture, and every one of them
+is animation phase: a blinking selection box, or the briefing's typewriter text
+caught mid-character with its two figures a frame out.
+
+Past that, the two stop being the same game, and no amount of work on the core
+will bring them back together. **The master reads POKEY's RANDOM register in 36
+places** -- 25 reads of `$100A` and 11 of `$180A`, found by searching the
+program ROM -- and RANDOM is a free-running 17-bit LFSR clocked at 1.25 MHz.
+The two machines do not give it the same number of clocks per frame:
+
+| | POKEY clocks per frame |
+|---|---|
+| MAME, at a round 60.000 Hz | 20,833 |
+| this core, at the board's 61.035 Hz | 20,480 |
+
+So every read returns a different number and the playthroughs diverge: different
+enemy placement, and the level-entry screen showing the exit on the other side
+of the room. Deep in a game the frame-by-frame difference runs 14-16%, but it is
+two correct machines playing two different games, not one of them drawing
+wrongly. Confirmed independently by the person this core was built for, who
+recognised the level-entry variation as the game's own behaviour -- the villain
+leaves by the side the player enters from on the next screen, and it reads
+correctly either way.
+
+That is the ceiling on this gate, and it is a consequence of choosing the
+board's frame rate over the oracle's (section 7.1). The obvious way through it,
+if a deeper comparison is ever wanted, is a bench-only mode that runs the CPU
+and POKEY enables off fractional accumulators delivering MAME's counts instead
+of the board's; the arithmetic is 50,000 and 62,500 pulses per three frames of
+655,360 clocks.
+
+---
+
+## 6. The build
 
 Quartus 18.1.1 in Docker (`raetro/quartus:pocket`), the 5CEBA4F23C8 on the
 Pocket. Full compilation: **0 errors**, and the Timing Analyzer reports the
@@ -136,9 +176,9 @@ takes four.
 
 ---
 
-## 6. Open questions
+## 7. Open questions
 
-### 6.1 Frame rate: 61.04 Hz, not MAME's 60
+### 7.1 Frame rate: 61.04 Hz, not MAME's 60
 
 The vertical timing PROM settles the vertical half absolutely: 256 lines, 232 of
 them active. The horizontal half is not in the romset and MAME does not model it
@@ -164,7 +204,7 @@ mode it shows as the demo's animation running a hair ahead of MAME's.
 If a horizontal timing PROM or a schematic ever settles this, the only thing to
 change is `HTOTAL` in `rtl/cloak_pkg.sv`.
 
-### 6.2 The master CPU clock
+### 7.2 The master CPU clock
 
 MAME runs the master at 1.000 MHz and the slave at 1.250 MHz and flags both
 `????`. Both POKEYs sit on the **master's** bus, and a POKEY's single clock pin
@@ -175,7 +215,7 @@ the master 1.25 MHz too.
 The core follows MAME until this is settled, because MAME is what every gate
 diffs against. Changing it is one constant in `rtl/cloak_core.sv`.
 
-### 6.3 Things MAME does not model, and neither does this
+### 7.3 Things MAME does not model, and neither does this
 
 * **3e00 bit 0**, the NVRAM write enable. MAME latches it and never uses it.
   Gating writes on it is not something the oracle can confirm, so it is left
@@ -185,7 +225,7 @@ diffs against. Changing it is one constant in `rtl/cloak_core.sv`.
 * **The watchdog.** The kick at 3a00 is decoded and discarded. A watchdog can
   only ever mask a fault in a core this size, never fix one.
 
-### 6.4 The bitmap clear
+### 7.4 The bitmap clear
 
 A 65536-pixel clear cannot be instantaneous on hardware, and MAME's is a
 `memset`. Measured in MAME: clears are rare (0.12 per frame) but **35 of 36 are
@@ -196,9 +236,9 @@ atomic, and about 1% of the slave's time averaged over a session.
 
 ---
 
-## 7. Audio
+## 8. Audio
 
-### 7.1 The level is right
+### 8.1 The level is right
 
 `sim/run_audio_unit.sh` recomputes MAME's `vol_init` ladder in the bench itself
 and checks the core's settled output against
@@ -221,7 +261,7 @@ conversion saturates. The core saturates at the same point; matching the oracle
 here means matching its clipping, and the bench asserts that rather than
 quietly scaling the output down.
 
-### 7.2 The bug the end-to-end bench could not have caught
+### 8.2 The bug the end-to-end bench could not have caught
 
 The first audio comparison ran fifteen seconds of attract against MAME and
 reported the two identical to within 0.1 dB in every band. It was comparing one
@@ -240,7 +280,7 @@ passes on silence is not evidence. `tools/capture_audio.sh` therefore drives a
 coin and a start and records the game's opening, where there is actually
 something to measure.
 
-### 7.3 The whole machine against a MAME recording
+### 8.3 The whole machine against a MAME recording
 
 `tools/capture_audio.sh` drives MAME through a coin at frame 120 and a start at
 frame 200 and records the game's opening; `sim/run_audio.sh` drives the core
@@ -278,9 +318,9 @@ This material is a sequence of effects, not a steady tone. Sliding the window
 The core and MAME are ~17 ms apart by the end of a one-second window, so any
 per-band difference under about 6 dB says nothing. Peak and RMS are stable
 against that shift, so they are what the gate uses; the exact level check is
-section 7.1's, against MAME's own expression rather than against a recording.
+section 8.1's, against MAME's own expression rather than against a recording.
 
-### 7.4 Two menu entries that are new to this series
+### 8.4 Two menu entries that are new to this series
 
 `interact.json` uses two framework addresses that none of the sibling cores
 expose, so they are the likeliest things to be wrong the first time this runs on
@@ -296,7 +336,7 @@ a Pocket:
   that is high (512 writes, 13 us) and toggles `nv_dirty` at the end so the wipe
   is written back to the .sav rather than coming straight back on the next load.
 
-### 7.5 What is still open
+### 8.5 What is still open
 
 Nothing has been listened to on hardware, and the output has not been checked
 against a recording of a real board -- only against MAME, which is a model of

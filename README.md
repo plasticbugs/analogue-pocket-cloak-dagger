@@ -90,7 +90,7 @@ presentations:
 
 ## How it is verified
 
-Six gates, all against MAME 0.288 as the oracle, described in full in
+Seven gates, all against MAME 0.288 as the oracle, described in full in
 [docs/verification.md](docs/verification.md):
 
 | gate | what it proves | cost |
@@ -100,6 +100,7 @@ Six gates, all against MAME 0.288 as the oracle, described in full in
 | `sim/run_selftest.sh` | the whole machine — both 6502s, the memory map, the communication RAM, the video — reproduces MAME frame for frame through the game's own power-on self-test | ~60 s |
 | `sim/run_audio_unit.sh` | `cloak_audio`'s output level against MAME's own op-amp expression, plus the decimator and the DC blocker | ~4 s |
 | `sim/run_audio.sh` | the whole machine's sound against a MAME recording of the same sequence | ~3 min |
+| `sim/run_gameplay.sh` | both machines through the same coin and start, diffed frame by frame | ~3 min |
 | `sim/lint.sh` / `sim/lint_platform.sh` | Verilator over the core, and over everything the Pocket builds | ~1 s |
 
 All of them are green, and the video gates are at **zero differing pixels**, not
@@ -139,6 +140,8 @@ tools/regress_render.sh              # reference renderer vs MAME's snapshots
 sim/run_video.sh                     # cloak_video vs the reference renderer
 tools/capture_selftest.sh            # capture MAME's self-test frames
 sim/run_selftest.sh                  # whole machine vs those frames
+tools/capture_gameplay.sh            # capture MAME through a coin, a start and a game
+sim/run_gameplay.sh                  # the core through the same, diffed frame by frame
 sim/run_audio_unit.sh                # op-amp ladder / decimator / DC blocker vs the arithmetic
 tools/capture_audio.sh               # record MAME's audio for the same coin/start sequence
 sim/run_audio.sh                     # whole machine's audio vs that recording (peak and RMS)
@@ -191,6 +194,16 @@ From [docs/verification.md](docs/verification.md) section 5, in full:
   before the slave gets going. The core sweeps the buffer at the system
   clock and holds the slave's clock enable for the duration — about 1.6 ms,
   atomic.
+* **Past about twenty seconds, the core and MAME stop being the same game.**
+  The master reads POKEY's RANDOM register in 36 places and RANDOM is a
+  free-running LFSR, which this core clocks 20,480 times per frame against
+  MAME's 20,833 — a consequence of running the board's 61.04 Hz rather than
+  MAME's round 60. Every read returns a different number, so the playthroughs
+  diverge: different enemy placement, the level-entry screen showing the exit
+  on the other side of the room. Both are correct; they are not identical.
+  Through the first 21 seconds, before the RNG reaches anything visible,
+  34 of 43 frames are pixel-identical and the rest differ only in animation
+  phase.
 * **The audio has been checked against MAME, not against a board.** MAME is
   a model of the hardware, and its own comment says the RC network it puts
   after the POKEYs is an approximation of what the board does next. Nothing

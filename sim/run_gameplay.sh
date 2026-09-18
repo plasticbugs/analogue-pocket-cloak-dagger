@@ -13,27 +13,30 @@ set -e
 cd "$(dirname "$0")"
 FRAMES=${1:-$(python3 -c "print(','.join(str(f) for f in range(240, 1501, 30)))")}
 STOP=${FRAMES##*,}
-[ -f ../artifacts/gameplay/00240.png ] || { echo "run tools/capture_gameplay.sh first"; exit 1; }
+REF=${REF:-../artifacts/gameplay}
+INPUTS=${INPUTS:-"120:coin1:8,200:start1:8"}
+OUT=${OUT:-../artifacts/gameplay_rtl}
+[ -d "$REF" ] || { echo "run tools/capture_gameplay.sh first"; exit 1; }
 verilator --cc --exe --build -j 8 -O2 -Wno-fatal -Wno-DECLFILENAME +1364-2005ext+v waivers.vlt \
     --top-module cloak_core -Mdir obj_system \
     ../rtl/cloak_pkg.sv ../rtl/cloak_core.sv ../rtl/cloak_video.sv ../rtl/cloak_main.sv \
     ../rtl/cloak_slave.sv ../rtl/cloak_audio.sv ../rtl/pokey.sv ../modules/cpu-t65/gen/t65.v \
     tb_system.cpp > obj_system.log 2>&1 || { tail -40 obj_system.log; exit 1; }
-mkdir -p ../artifacts/gameplay_rtl
-rm -f ../artifacts/gameplay_rtl/*.ppm
-./obj_system/Vcloak_core ${ROM:-../build/cloak.rom} ../artifacts/gameplay_rtl "$STOP" "$FRAMES" \
-    "120:coin1:8,200:start1:8" > ../artifacts/gameplay_rtl/run.log 2>&1 \
-    || { tail -20 ../artifacts/gameplay_rtl/run.log; exit 1; }
-python3 - "$FRAMES" <<'PY'
-import sys, subprocess, re
+mkdir -p "$OUT"
+rm -f "$OUT"/*.ppm 2>/dev/null || true
+./obj_system/Vcloak_core ${ROM:-../build/cloak.rom} "$OUT" "$STOP" "$FRAMES" \
+    "$INPUTS" > "$OUT/run.log" 2>&1 || { tail -20 "$OUT/run.log"; exit 1; }
+REF=$REF OUT=$OUT python3 - "$FRAMES" <<'PY'
+import sys, os, subprocess, re
 frames = [int(f) for f in sys.argv[1].split(',')]
+REF, OUT = os.environ['REF'], os.environ['OUT']
 worst = 0.0
 rows = []
 for f in frames:
     n = '%05d' % f
     out = subprocess.run(['python3', '../tools/diff_frames.py',
-                          f'../artifacts/gameplay_rtl/frame_{n}.ppm',
-                          f'../artifacts/gameplay/{n}.png'],
+                          f'{OUT}/frame_{n}.ppm',
+                          f'{REF}/{n}.png'],
                          capture_output=True, text=True).stdout
     m = re.search(r'diff (\d+)/(\d+) \(([\d.]+)%\)', out)
     if not m:
