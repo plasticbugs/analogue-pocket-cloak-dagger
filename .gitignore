@@ -115,3 +115,4 @@ sim/*.log
 # Verilator object dirs for this core's benches
 sim/obj_video/
 sim/obj_*/
+/artifacts/

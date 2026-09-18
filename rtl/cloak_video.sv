@@ -61,7 +61,7 @@ module cloak_video
     input  logic  [7:0] gfx_wdata,
     input  logic        prom_we,
     input  logic  [7:0] prom_waddr,
-    input  logic  [7:0] prom_wdata,
+    input  logic  [7:0] prom_wdata,   // only bits 1:0 are programmed
 
     // ---- video out ----------------------------------------------------------
     output logic  [7:0] red, green, blue,
@@ -84,7 +84,7 @@ module cloak_video
         if (reset) begin
             hcnt <= '0; vcnt <= '0;
         end else if (cen_pix) begin
-            if (hcnt == HTOTAL - 1) begin
+            if (hcnt == HTOTAL - 9'd1) begin
                 hcnt <= '0;
                 vcnt <= vcnt + 8'd1;
             end else begin
@@ -98,14 +98,14 @@ module cloak_video
     // edge that begins dot x answers during dot x+1.
     wire [8:0] h_sum2 = hcnt + 9'd2;
     wire       h_wrap = (h_sum2 >= HTOTAL);
-    wire [8:0] h_p2   = h_wrap ? (h_sum2 - HTOTAL) : h_sum2;
+    wire [8:0] h_p2   = h_wrap ? (h_sum2 - HTOTAL) : h_sum2;   // both 9-bit
     wire [7:0] v_p2   = h_wrap ? (vcnt + 8'd1) : vcnt;
 
     // latched once per line, during the back porch, for the line about to start
     logic [1:0] vflags;                 // {vsync_n, active}
-    wire  [7:0] next_row = (hcnt >= HTOTAL - 8) ? (vcnt + 8'd1) : vcnt;
+    wire  [7:0] next_row = (hcnt >= HTOTAL - 9'd8) ? (vcnt + 8'd1) : vcnt;
     always_ff @(posedge clk) begin
-        if (cen_pix && hcnt == HTOTAL - 2) vflags <= vprom[next_row - 8'd1];
+        if (cen_pix && hcnt == HTOTAL - 9'd2) vflags <= vprom[next_row - 8'd1];
     end
     wire line_active = vflags[0];
     wire line_vsync  = ~vflags[1];
@@ -121,7 +121,7 @@ module cloak_video
     // row at ==1, latched at ==2, swapped in at ==7. The group that runs over
     // the last eight dots of the line fetches column 0 of the next row, so the
     // first displayed tile is already in hand.
-    wire [4:0] fcol_raw = (hcnt >= HTOTAL - 8) ? 5'd0 : (hcnt[7:3] + 5'd1);
+    wire [4:0] fcol_raw = (hcnt >= HTOTAL - 9'd8) ? 5'd0 : (hcnt[7:3] + 5'd1);
     wire [7:0] frow_raw = next_row;
     wire [4:0] fcol = flip ? (5'd31 - fcol_raw)      : fcol_raw;
     wire [4:0] frow = flip ? (5'd31 - frow_raw[7:3]) : frow_raw[7:3];
@@ -263,7 +263,6 @@ module cloak_video
     logic  [7:0] clr_i;
     logic  [7:0] sy_lat, scode_lat, sx_lat;
     logic  [8:0] build_line;
-    logic  [3:0] srow;
     logic        sflipx;
     logic signed [9:0] sx_r;
     logic [31:0] srow_px;
@@ -282,7 +281,7 @@ module cloak_video
         lb_we <= 1'b0;
         if (reset) begin
             smode <= M_DONE; lb_build <= 1'b0; build_line <= '0; step <= '0; sn <= '0;
-        end else if (cen_pix && hcnt == HTOTAL - 1) begin
+        end else if (cen_pix && hcnt == HTOTAL - 9'd1) begin
             // a new line begins on this edge: swap buffers and fill the other
             // one for the line after it
             lb_build   <= ~lb_build;
@@ -310,7 +309,6 @@ module cloak_video
                         5'd3: scode_lat <= mo_vq;
                         5'd4: sx_lat    <= mo_vq;
                         5'd5: begin
-                            srow      <= srow_use;
                             sflipx    <= flip ? ~scode_lat[7] : scode_lat[7];
                             sx_r      <= flip ? ($signed({2'b00, sx_lat}) - 10'sd9)
                                               : $signed({2'b00, sx_lat});
@@ -355,13 +353,13 @@ module cloak_video
     always_ff @(posedge clk) if (cen_pix) pal_raddr <= pix_index;
 
     // two dots of pipeline: pens -> palette -> colour ladder, syncs to match
-    logic [2:0] de_pipe, hs_pipe, vs_pipe;
+    logic [1:0] de_pipe, hs_pipe, vs_pipe;
     wire        de_raw = !hblank && line_active;
     wire        hs_raw = (hcnt >= HS_START) && (hcnt < HS_END);
     always_ff @(posedge clk) if (cen_pix) begin
-        de_pipe <= {de_pipe[1:0], de_raw};
-        hs_pipe <= {hs_pipe[1:0], hs_raw};
-        vs_pipe <= {vs_pipe[1:0], line_vsync};
+        de_pipe <= {de_pipe[0], de_raw};
+        hs_pipe <= {hs_pipe[0], hs_raw};
+        vs_pipe <= {vs_pipe[0], line_vsync};
         red     <= gun(~pal_q[8:6]);
         green   <= gun(~pal_q[5:3]);
         blue    <= gun(~pal_q[2:0]);

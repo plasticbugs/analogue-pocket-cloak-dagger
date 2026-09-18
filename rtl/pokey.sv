@@ -8,9 +8,12 @@
 // filters and the volume-only mode. The serial port, keyboard scan, pot
 // scan and interrupts are not modelled beyond their register reads.
 //
-// `cen` is the 1.789772 MHz chip clock. `sum` is the sum of the four
-// channels' volume nibbles (0-60) as MAME's LEGACY_LINEAR output sees it;
-// the board scales it.
+// `cen` is the chip clock (1.25 MHz on this board). Two outputs: `sum` is the
+// sum of the four channels' volume nibbles (0-60), which is what MAME's
+// LEGACY_LINEAR output uses, and `out_raw` is MAME's m_out_raw -- the four
+// volumes packed four bits each, which is what every other output type indexes
+// its resistance table with. Cloak & Dagger takes the second one; see
+// rtl/cloak_audio.sv.
 //------------------------------------------------------------------------------
 `default_nettype none
 
@@ -23,7 +26,8 @@ module pokey (
     input  logic [7:0] wdata,
     output logic [7:0] rdata,           // combinational for the current addr
     input  logic [7:0] allpot,          // the ALLPOT input port (DIP switches)
-    output logic [5:0] sum
+    output logic [5:0] sum,
+    output logic [15:0] out_raw         // MAME's m_out_raw: volume per channel, 4 bits each
 );
     // register / state
     logic [7:0] audf [4];
@@ -78,7 +82,7 @@ module pokey (
             for (int i = 0; i < 4; i++) begin audf[i] <= 8'h00; audc[i] <= 8'hb0; counter[i] <= 8'h00; borrow[i] <= 4'd0; outp[i] <= 1'b0; fsamp[i] <= 1'b0; end
             audctl <= 8'h00; skctl <= 8'h00; cnt28 <= '0; cnt114 <= '0;
             lfsr4 <= P4_0; lfsr5 <= P5_0; lfsr9 <= n9(9'h1ff); lfsr17 <= n17(17'h1ffff);
-            sum <= 6'd0;
+            sum <= 6'd0; out_raw <= 16'd0;
         end else begin
             // -------- register writes (write_internal) --------
             if (we) case (addr)
@@ -121,7 +125,8 @@ module pokey (
                 automatic logic [4:0] c28;
                 automatic logic [6:0] c114;
                 automatic logic b3, b4, b1, b2;
-                automatic logic [5:0] s;
+                automatic logic [5:0]  s;
+                automatic logic [15:0] raw;
                 for (int i = 0; i < 4; i++) begin c[i] = counter[i]; bw[i] = borrow[i]; o[i] = outp[i]; fs[i] = fsamp[i]; end
                 l4 = lfsr4; l5 = lfsr5; l9 = lfsr9; l17 = lfsr17; c28 = cnt28; c114 = cnt114;
                 trig28 = 1'b0; trig114 = 1'b0; trig1 = 1'b1; trigbase = 1'b0;
@@ -221,13 +226,16 @@ module pokey (
                 end
 
                 // output: volume of every channel whose (output ^ filter) is set or is volume-only
-                s = 6'd0;
+                s = 6'd0; raw = 16'd0;
                 for (int i = 0; i < 4; i++)
-                    if ((o[i] ^ fs[i]) || audc[i][4]) s = s + {2'b00, audc[i][3:0]};
+                    if ((o[i] ^ fs[i]) || audc[i][4]) begin
+                        s = s + {2'b00, audc[i][3:0]};
+                        raw[4*i +: 4] = audc[i][3:0];
+                    end
 
                 for (int i = 0; i < 4; i++) begin counter[i] <= c[i]; borrow[i] <= bw[i]; outp[i] <= o[i]; fsamp[i] <= fs[i]; end
                 lfsr4 <= l4; lfsr5 <= l5; lfsr9 <= l9; lfsr17 <= l17; cnt28 <= c28; cnt114 <= c114;
-                sum <= s;
+                sum <= s; out_raw <= raw;
             end
         end
     end

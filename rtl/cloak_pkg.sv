@@ -11,15 +11,15 @@ package cloak_pkg;
     // timing PROM 136023-116 says which lines are active and which carry
     // VSYNC; the counter here is MAME's screen row, which is the PROM's index
     // plus one, so every PROM lookup uses vcnt-1.
-    localparam int HTOTAL   = 320;
-    localparam int HACTIVE  = 256;   // dots 0..255
-    localparam int HS_START = 272;   // 16 dots of front porch
-    localparam int HS_END   = 304;   // 32 dots of sync, 16 of back porch
-    localparam int VTOTAL   = 256;
-    localparam int VACTIVE0 = 24;    // first active row (PROM index 23)
-    localparam int VACTIVE1 = 255;   // last  active row (PROM index 254)
-    localparam int VIS_W    = 256;
-    localparam int VIS_H    = 232;
+    localparam logic [8:0] HTOTAL   = 9'd320;
+    localparam logic [8:0] HACTIVE  = 9'd256;   // dots 0..255
+    localparam logic [8:0] HS_START = 9'd272;   // 16 dots of front porch
+    localparam logic [8:0] HS_END   = 9'd304;   // 32 dots of sync, 16 of back porch
+    localparam int         VTOTAL   = 256;
+    localparam int         VACTIVE0 = 24;       // first active row (PROM index 23)
+    localparam int         VACTIVE1 = 255;      // last  active row (PROM index 254)
+    localparam int         VIS_W    = 256;
+    localparam int         VIS_H    = 232;
 
     // ---- palette index allocation (cloak.cpp's comment) ---------------------
     localparam logic [5:0] PAL_PF  = 6'h00;   // 0-15  playfield

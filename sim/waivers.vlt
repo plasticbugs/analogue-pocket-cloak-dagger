@@ -1,0 +1,22 @@
+`verilator_config
+// The T65 sources are GHDL output: they use `break` as a signal name (legal in
+// Verilog-2005, a keyword in SystemVerilog), so every script that compiles them
+// passes +1364-2005ext+v, and their lint is off wholesale.
+lint_off -file "*modules/cpu-t65/gen/t65.v"
+lint_off -rule UNUSEDPARAM -file "*rtl/cloak_pkg.sv"
+lint_off -rule UNUSEDSIGNAL -file "*rtl/cloak_pkg.sv"
+// T65 exposes a DEBUG record and a handful of 65C816 outputs this board has no
+// use for; leaving them unconnected is deliberate.
+lint_off -rule PINCONNECTEMPTY
+lint_off -rule PINMISSING -file "*rtl/cloak_main.sv"
+lint_off -rule PINMISSING -file "*rtl/cloak_slave.sv"
+// Intentional: the bitmap's fourth bit is stored but never displayed (MAME
+// masks the pen with 0x07), SYSTEM bit 0 is replaced by the video counter
+// inside cloak_main, three LS259 outputs go nowhere on this board, and the
+// fixed-point stages in cloak_audio truncate on purpose.
+lint_off -rule UNUSEDSIGNAL -file "*rtl/cloak_video.sv"
+lint_off -rule UNUSEDSIGNAL -file "*rtl/cloak_audio.sv"
+lint_off -rule UNUSEDSIGNAL -file "*rtl/cloak_main.sv"
+// core_rst is generated synchronously from clk_sys and then used as T65's
+// asynchronous Res_n, which is what that core wants.
+lint_off -rule SYNCASYNCNET -file "*rtl/cloak_core.sv"
