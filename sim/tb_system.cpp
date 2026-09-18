@@ -1,7 +1,10 @@
 // Whole-machine bench: load the .rom image into cloak_core and run the real
 // game -- both 6502s, the video, the POKEYs -- capturing frames as PPM.
 //
-//   Vcloak_core <image.rom> <out-dir> [frames] [frame,frame,...] [inputs]
+//   Vcloak_core <image.rom> <out-dir> [frames] [frame,frame,...] [inputs] [out.wav]
+//
+// With a .wav path it also records every audio sample the core produces (one
+// per audio_valid, 48.08 kHz, signed 16-bit mono) for tools/compare_audio.py.
 //
 // `inputs` is the same "frame:name:len" list tools/dump_state.lua takes, with
 // names coin1, coin2, start1, start2, service, test, button, and the eight
@@ -15,6 +18,23 @@
 #include <vector>
 #include <set>
 #include <map>
+
+// 16-bit mono RIFF/WAVE
+static void write_wav(const char *path, const std::vector<short> &s, int rate) {
+    FILE *f = fopen(path, "wb");
+    if (!f) { fprintf(stderr, "cannot write %s\n", path); return; }
+    unsigned data = (unsigned)(s.size() * 2), riff = 36 + data;
+    unsigned char h[44] = {'R','I','F','F',0,0,0,0,'W','A','V','E','f','m','t',' ',
+                           16,0,0,0, 1,0, 1,0, 0,0,0,0, 0,0,0,0, 2,0, 16,0,
+                           'd','a','t','a', 0,0,0,0};
+    unsigned byterate = (unsigned)rate * 2;
+    memcpy(h + 4, &riff, 4); memcpy(h + 24, &rate, 4);
+    memcpy(h + 28, &byterate, 4); memcpy(h + 40, &data, 4);
+    fwrite(h, 1, 44, f);
+    fwrite(s.data(), 2, s.size(), f);
+    fclose(f);
+    fprintf(stderr, "wrote %s: %zu samples at %d Hz\n", path, s.size(), rate);
+}
 
 static Vcloak_core *dut;
 static vluint64_t main_time = 0;
@@ -63,6 +83,8 @@ int main(int argc, char **argv) {
         for (char *t = strtok(s, ","); t; t = strtok(nullptr, ",")) want.insert(atoi(t));
         free(s);
     }
+    const char *wavpath = (argc > 6 && argv[6][0]) ? argv[6] : nullptr;
+    std::vector<short> wav;
     std::vector<Press> presses;
     if (argc > 5 && argv[5][0]) {
         char *s = strdup(argv[5]);
@@ -118,6 +140,7 @@ int main(int argc, char **argv) {
     const long max_clocks = (long)nframes * 700000 + 4000000;
     while (frame <= nframes && clocks < max_clocks) {
         tick(); clocks++;
+        if (wavpath && dut->audio_valid) wav.push_back((short)dut->audio);
         if (!dut->cen_pix_out) continue;
         int vs = dut->vsync;
         if (vs && !last_vs) {
@@ -149,6 +172,7 @@ int main(int argc, char **argv) {
             px++;
         }
     }
+    if (wavpath) write_wav(wavpath, wav, 48077);
     printf("ran %d frames, %ld clocks\n", frame, clocks);
     delete dut;
     return 0;

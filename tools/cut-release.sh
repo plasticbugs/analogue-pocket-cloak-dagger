@@ -55,7 +55,7 @@ done
 for d in "$OUT"/Cores/*/; do
     [ -f "$d/bitstream.rbf_r" ] || { echo "no bitstream for $(basename "$d") in run $RUN"; exit 1; }
 done
-for extra in ncv1.mra ncv2.mra README.md tools/mra_build.py; do
+for extra in cloak.mra README.md tools/mra_build.py; do
     [ -f "$extra" ] && cp "$extra" "$OUT/$(basename "$extra")"
 done
 
@@ -78,8 +78,8 @@ if find "$OUT" -name '*.rom' | grep -q .; then
     echo "refusing to publish: a ROM is in the package"; exit 1
 fi
 
-VER=$(python3 -c "import json;print(json.load(open('pkg/pocket/Cores/plasticbugs.namcocollection/core.json'))['core']['metadata']['version'])")
-ZIP="$PWD/namcocollection-pocket-sdcard.zip"
+VER=$(python3 -c "import json;print(json.load(open('pkg/pocket/Cores/plasticbugs.cloak/core.json'))['core']['metadata']['version'])")
+ZIP="$PWD/cloak-pocket-sdcard.zip"
 rm -f "$ZIP"
 (cd "$OUT" && zip -qr "$ZIP" .)
 echo "package $VER, zip $(wc -c < "$ZIP") bytes"
@@ -89,7 +89,7 @@ done
 
 gh release create "$TAG" \
     --title "Namco Classic Collection for Analogue Pocket $TAG" \
-    --notes "Unzip onto the Pocket SD card root, overwriting previous files. Build ncv1.rom and ncv2.rom with the included mra_build.py and put them in Assets/namcocollection/common/." \
+    --notes "Unzip onto the Pocket SD card root, overwriting previous files. Build cloak.rom with the included mra_build.py from your own MAME cloak romset and put it in Assets/cloak/common/." \
     "$ZIP"
 rm -f "$ZIP"
 echo "published $TAG"

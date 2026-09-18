@@ -111,19 +111,30 @@ module cloak_audio (
         end
     end
 
-    // ---- DC blocker: y = x - x1 + y1 - y1/8192 (a pole at 24 Hz) -----------
+    // ---- DC blocker: y = x - x1 + y*(1 - 2^-13), a pole at 0.93 Hz --------
+    // (2^-13 per output sample at 48.08 kHz: a 170 ms time constant.)
+    // The state is kept 12 bits below the sample's own scale. Without that
+    // headroom the leak term is smaller than one LSB for any quiet signal --
+    // `y >>> 13` is zero for |y| < 8192, and the machine idles at about 4,000 --
+    // so the pole never moves and the offset sits there for ever. That is
+    // exactly what it did, and sim/run_audio.sh caught it: fifteen seconds of
+    // dead-flat DC at the idle level with the blocker supposedly on.
+    localparam int HP_FRAC = 12;
     logic signed [25:0] hp_x1;
-    logic signed [31:0] hp_y;
+    logic signed [43:0] hp_acc;                 // y, scaled by 2^HP_FRAC
     wire  signed [31:0] dec_ext = $signed({{6{dec_sample[25]}}, dec_sample});
     wire  signed [31:0] hp_x1_e = $signed({{6{hp_x1[25]}}, hp_x1});
-    wire  signed [31:0] hp_next = dec_ext - hp_x1_e + hp_y - (hp_y >>> 13);
+    wire  signed [31:0] hp_diff = dec_ext - hp_x1_e;
+    wire  signed [43:0] hp_in   = $signed({{12{hp_diff[31]}}, hp_diff}) <<< HP_FRAC;
+    wire  signed [43:0] hp_next = hp_in + hp_acc - (hp_acc >>> 13);
+    wire  signed [31:0] hp_y    = 32'($signed(hp_acc >>> HP_FRAC));
 
     always_ff @(posedge clk) begin
         if (reset) begin
-            hp_x1 <= '0; hp_y <= '0;
+            hp_x1 <= '0; hp_acc <= '0;
         end else if (dec_valid) begin
-            hp_y  <= hp_next;
-            hp_x1 <= dec_sample;
+            hp_acc <= hp_next;
+            hp_x1  <= dec_sample;
         end
     end
 

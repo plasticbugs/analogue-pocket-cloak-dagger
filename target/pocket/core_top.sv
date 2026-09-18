@@ -1069,6 +1069,7 @@ module core_top
         .cen_pix_out    ( cd_ce_pix      ),
 
         .audio          ( cd_audio       ),
+        .audio_valid    (                ),
 
         .nv_addr        ( po_nv_addr     ),
         .nv_we          ( po_nv_we       ),

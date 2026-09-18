@@ -52,6 +52,7 @@ module cloak_core
 
     // ---- audio -------------------------------------------------------------
     output logic signed [15:0] audio,
+    output logic        audio_valid,    // one clock per 48.08 kHz sample
 
     // ---- NVRAM (the Pocket's save slot) ------------------------------------
     input  logic  [8:0] nv_addr,
@@ -230,7 +231,7 @@ module cloak_core
         .clk(clk_sys), .reset(core_rst), .cen_pokey(cen_slave),
         .raw1(pokey1_raw), .raw2(pokey2_raw),
         .dcblock_en(dcblock_en),
-        .audio(audio), .audio_valid()
+        .audio(audio), .audio_valid(audio_valid)
     );
 
     wire unused = &{1'b0, vid_hcnt, coin_counter, start_led, watchdog_kick,

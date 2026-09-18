@@ -13,6 +13,8 @@ constantly.
 | `tools/regress_render.sh` | the reference renderer reproduces MAME's own snapshot, pixel for pixel, on every state in the corpus | ~20 s |
 | `sim/run_video.sh` | `cloak_video` reproduces the reference renderer, pixel for pixel, on every state | ~3 s |
 | `sim/run_selftest.sh` | the whole machine -- both 6502s, the memory map, the communication RAM, the video -- reproduces MAME frame for frame through the game's own power-on self-test | ~60 s |
+| `sim/run_audio_unit.sh` | `cloak_audio`'s output level against MAME's own op-amp expression, plus the decimator and the DC blocker | ~4 s |
+| `sim/run_audio.sh` | the whole machine's sound against a MAME recording of the same sequence | ~3 min |
 | `sim/lint.sh` | Verilator over the whole core | ~1 s |
 
 All four are green. The video gates are at **zero differing pixels**, not "close".
@@ -160,10 +162,95 @@ has to finish before the slave gets going. The core therefore sweeps the buffer
 at the system clock and holds the slave's clock enable while it does -- 1.6 ms,
 atomic, and about 1% of the slave's time averaged over a session.
 
-### 5.5 Audio has not been checked against a recording yet
+---
 
-The output stage is derived exactly (see `rtl/cloak_audio.sv`: the op-amp path
-collapses to a sum of four per-volume conductances, checked identical to MAME's
-expression on 2,000 random values) but no A/B against MAME's `-wavwrite` has
-been run. METHODOLOGY section 5.1 applies: until that measurement exists, the
-audio is *derived*, not *verified*.
+## 6. Audio
+
+### 6.1 The level is right
+
+`sim/run_audio_unit.sh` recomputes MAME's `vol_init` ladder in the bench itself
+and checks the core's settled output against
+`32767 * (V0(raw1) + V0(raw2)) / 2` -- MAME's own expression, including its
+0.50-per-POKEY routing. Four cases:
+
+| input | expected | core | error |
+|---|---|---|---|
+| all channels off (the idle offset) | 65.5 | 64 | 1.5 |
+| two channels at 15 on each chip | 30,649.5 | 30,652 | 2.5 |
+| one channel at 8 on each chip | 9,698.8 | 9,700 | 1.2 |
+| a mixed set of volumes | 16,199.6 | 16,201 | 1.4 |
+
+Under three LSBs of 32,767 -- 0.008% -- through the 16-entry conductance table,
+the one-pole filters, the boxcar decimator and the output scale.
+
+**The board can clip, and MAME clips with it.** Every channel of both POKEYs at
+volume 15 is 1.87 of full scale through MAME's routing, so the 16-bit
+conversion saturates. The core saturates at the same point; matching the oracle
+here means matching its clipping, and the bench asserts that rather than
+quietly scaling the output down.
+
+### 6.2 The bug the end-to-end bench could not have caught
+
+The first audio comparison ran fifteen seconds of attract against MAME and
+reported the two identical to within 0.1 dB in every band. It was comparing one
+constant with another: **Cloak & Dagger is silent for the first fifteen seconds
+of attract**, and both sides were sitting at the POKEY's idle offset of 0.002.
+
+Underneath that, the DC blocker was broken. Its leak term is `y >>> 13`, which
+is **zero for any `|y|` below 8192** -- and the machine idles at about 4,000. The
+pole never moved and the offset would have sat there for ever. The fix keeps the
+filter state twelve bits below the sample's own scale; `sim/run_audio_unit.sh`
+now asserts that a constant decays to under a twentieth of itself in four time
+constants, and that a 6 kHz square still straddles zero afterwards.
+
+The lesson is METHODOLOGY section 5.1's, sharpened: an end-to-end test that
+passes on silence is not evidence. `tools/capture_audio.sh` therefore drives a
+coin and a start and records the game's opening, where there is actually
+something to measure.
+
+### 6.3 The whole machine against a MAME recording
+
+`tools/capture_audio.sh` drives MAME through a coin at frame 120 and a start at
+frame 200 and records the game's opening; `sim/run_audio.sh` drives the core
+through the same schedule and compares. One second from the first sound:
+
+```
+onset: MAME 12.56 s, core 12.35 s
+mean (the standing offset): MAME +0.01719, core -0.00261 -- removed from both
+  peak   MAME 0.1410   core 0.1512   ratio 1.072 (+0.61 dB)
+  RMS    MAME 0.0450   core 0.0430   ratio 0.955 (-0.40 dB)
+  worst of peak/RMS: 0.61 dB (tolerance 1.5)
+```
+
+Two things had to be got right for that number to mean anything.
+
+**The offset has to come out of both.** MAME's stream is unipolar -- its POKEY
+model leaves the summing node's standing offset in -- and the core's is not,
+because the DC blocker is the whole point. Compared with the offset in place the
+core measured 0.55 dB down on peak and 1.1 dB down on RMS, all of it that one
+difference.
+
+**Per-band energy is reported but not gated, and that is a measured decision.**
+This material is a sequence of effects, not a steady tone. Sliding the window
+0.2 s along **MAME's own recording** moves its 500 Hz band by **14 dB** and its
+707 Hz band by **6 dB**:
+
+```
+  start(s)   500 Hz   707 Hz  1000 Hz
+    0.05     -56.5    -73.9    -88.8
+    0.25     -45.6    -77.1    -94.9
+    0.65     -54.0    -70.7    -90.1
+    0.85     -59.9    -76.5    -86.6
+```
+
+The core and MAME are ~17 ms apart by the end of a one-second window, so any
+per-band difference under about 6 dB says nothing. Peak and RMS are stable
+against that shift, so they are what the gate uses; the exact level check is
+section 6.1's, against MAME's own expression rather than against a recording.
+
+### 6.4 What is still open
+
+Nothing has been listened to on hardware, and the output has not been checked
+against a recording of a real board -- only against MAME, which is a model of
+one. The RC network after the POKEYs is modelled as MAME models it, and MAME's
+own comment says it is an approximation of what the board does next.

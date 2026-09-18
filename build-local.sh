@@ -10,8 +10,8 @@ set -e
 cd "$(dirname "$0")"
 FLOW=${1:-compile}
 case "$FLOW" in
-    map) CMD="quartus_map --read_settings_files=on projects/ssprint_pocket.qpf -c ssprint_pocket" ;;
-    compile) CMD="quartus_sh --flow compile projects/ssprint_pocket.qpf" ;;
+    map) CMD="quartus_map --read_settings_files=on projects/cloak_pocket.qpf -c cloak_pocket" ;;
+    compile) CMD="quartus_sh --flow compile projects/cloak_pocket.qpf" ;;
     *) echo "usage: $0 [map|compile]"; exit 2 ;;
 esac
 docker run --rm --platform linux/amd64 \
