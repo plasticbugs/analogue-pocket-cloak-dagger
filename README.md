@@ -72,9 +72,17 @@ gamepad, and the reason this game needs all four rather than the usual one.
 The igniter (the cabinet's own dedicated button, which lights the fuse) is on
 both triggers so whichever hand is free can reach it.
 
-DIP-switch equivalents — Credits, Coin A, Coin B, Demo Freeze Mode — the
-Self-Test switch, an Audio DC Blocker toggle, a Debug Overlay toggle and
-Screen Shape are all in the Pocket's Interact menu.
+DIP-switch equivalents — Credits, Coin A, Coin B, Demo Freeze Mode — plus the
+Self-Test switch, Screen Shape, a Clear Settings & Scores action, and two audio
+options are in the Pocket's Interact menu.
+
+**Cabinet Reverb** (off / light / medium / heavy) puts a short dark room around
+the whole mix: three feedback comb filters at 29.7, 37.1 and 41.1 ms with a
+one-pole low-pass in each loop, so the tail darkens as it decays. It is an
+option, not the board — the arcade cabinet's own acoustics, not something in
+the schematic. Ported from the Punch-Out!! core (`rtl/cloak_reverb.sv`).
+
+**Audio DC Blocker** (on by default) is explained under "Open questions".
 
 ## The screen
 
@@ -90,7 +98,7 @@ presentations:
 
 ## How it is verified
 
-Seven gates, all against MAME 0.288 as the oracle, described in full in
+Eight gates, seven of them against MAME 0.288 as the oracle, described in full in
 [docs/verification.md](docs/verification.md):
 
 | gate | what it proves | cost |
@@ -99,6 +107,7 @@ Seven gates, all against MAME 0.288 as the oracle, described in full in
 | `sim/run_video.sh` | `cloak_video` reproduces the reference renderer, pixel for pixel, on every state | ~3 s |
 | `sim/run_selftest.sh` | the whole machine — both 6502s, the memory map, the communication RAM, the video — reproduces MAME frame for frame through the game's own power-on self-test | ~60 s |
 | `sim/run_audio_unit.sh` | `cloak_audio`'s output level against MAME's own op-amp expression, plus the decimator and the DC blocker | ~4 s |
+| `sim/run_reverb.sh` | `cloak_reverb`'s comb delays, decay and pass-through | ~2 s |
 | `sim/run_audio.sh` | the whole machine's sound against a MAME recording of the same sequence | ~3 min |
 | `sim/run_gameplay.sh` | both machines through the same coin and start, diffed frame by frame | ~3 min |
 | `sim/lint.sh` / `sim/lint_platform.sh` | Verilator over the core, and over everything the Pocket builds | ~1 s |
@@ -143,6 +152,7 @@ sim/run_selftest.sh                  # whole machine vs those frames
 tools/capture_gameplay.sh            # capture MAME through a coin, a start and a game
 sim/run_gameplay.sh                  # the core through the same, diffed frame by frame
 sim/run_audio_unit.sh                # op-amp ladder / decimator / DC blocker vs the arithmetic
+sim/run_reverb.sh                    # the optional cabinet reverb's delays and decay
 tools/capture_audio.sh               # record MAME's audio for the same coin/start sequence
 sim/run_audio.sh                     # whole machine's audio vs that recording (peak and RMS)
 sim/lint.sh                          # Verilator over the core alone
@@ -217,7 +227,7 @@ From [docs/verification.md](docs/verification.md) section 5, in full:
 | `docs/hardware.md` | the machine, from MAME's driver and the romset's own PROM — read first |
 | `docs/verification.md` | what is checked, how, and what is still open |
 | `METHODOLOGY.md` | the method this core and its siblings follow |
-| `rtl/` | the core: `cloak_core.sv` (clocking and top level), `cloak_main.sv` / `cloak_slave.sv` (the two 6502 buses), `cloak_video.sv` (playfield, bitmap, motion objects, palette), `cloak_audio.sv` (the op-amp output stage), `pokey.sv`, `dbg_overlay.sv` |
+| `rtl/` | the core: `cloak_core.sv` (clocking and top level), `cloak_main.sv` / `cloak_slave.sv` (the two 6502 buses), `cloak_video.sv` (playfield, bitmap, motion objects, palette), `cloak_audio.sv` (the op-amp output stage), `cloak_reverb.sv` (the optional cabinet reverb), `pokey.sv` |
 | `modules/` | the vendored T65 6502, see `modules/VENDOR.md` |
 | `target/pocket/core_top.sv` | Pocket integration: the 40 MHz PLL, pixel-sync, control mapping, the save slot |
 | `platform/pocket/` | the OpenGateware Pocket framework (APF bridge, scaler, audio path, Interact decoding) |

@@ -1017,6 +1017,7 @@ module core_top
     wire [7:0] cd_r, cd_g, cd_b;
     wire       cd_hs, cd_vs, cd_hb, cd_vb, cd_de, cd_ce_pix;
     wire signed [15:0] cd_audio;
+    wire        cd_audio_ce;
     wire [15:0] dbg_main_addr, dbg_slave_addr;
     wire       dbg_bm_busy;
     wire [7:0] nv_rd_data_core;
@@ -1069,7 +1070,7 @@ module core_top
         .cen_pix_out    ( cd_ce_pix      ),
 
         .audio          ( cd_audio       ),
-        .audio_valid    (                ),
+        .audio_valid    ( cd_audio_ce    ),
 
         .nv_addr        ( po_nv_addr     ),
         .nv_we          ( po_nv_we       ),
@@ -1084,30 +1085,6 @@ module core_top
     assign nv_rd_data = nv_rd_data_core;
 
     //! ------------------------------------------------------------------
-    //! Diagnostic overlay (METHODOLOGY section 4), behind the menu's
-    //! "Debug > Overlay" entry: three rows of 32 squares on the bottom
-    //! scanlines. Row 0 is the master 6502's address bus and the slave's, so a
-    //! hang in either shows as a row that has stopped moving; row 1 is both
-    //! POKEYs' channel volumes, which shows whether sound is being generated
-    //! at all; row 2 is the save-slot state machine, the bitmap clear and the
-    //! input ports. Costs about 50 LUTs and is the only way to see inside a
-    //! fault that appears on the panel and nowhere else.
-    //! ------------------------------------------------------------------
-    wire [7:0] ovl_r, ovl_g, ovl_b;
-    wire [95:0] ovl_status = {
-        dbg_main_addr, dbg_slave_addr,                       // row 0
-        16'h0000, 8'h00, 5'b0, dbg_bm_busy, ioctl_download, cd_ce_pix,  // row 1
-        nv_stat_s, 6'b0, m_coin1, m_start1, cd_dsw           // row 2
-    };
-    dbg_overlay ovl (
-        .clk(clk_sys), .cen_pix(cd_ce_pix), .enable(mod_sw0[7]),
-        .de(cd_de), .vsync(cd_vs),
-        .r_in(cd_r), .g_in(cd_g), .b_in(cd_b),
-        .status(ovl_status),
-        .r_out(ovl_r), .g_out(ovl_g), .b_out(ovl_b)
-    );
-
-    //! ------------------------------------------------------------------
     //! Video: the core emits exactly one pixel per clk_vid tick (both are the
     //! same PLL's /8 outputs and pix_sync keeps their phase fixed), so this is
     //! a retiming register onto the video clock, not a rate change.
@@ -1115,7 +1092,7 @@ module core_top
     reg [7:0] vr_q, vg_q, vb_q;
     reg       vhs_q, vvs_q, vde_q;
     always @(posedge clk_vid) begin
-        vr_q  <= ovl_r; vg_q <= ovl_g; vb_q <= ovl_b;
+        vr_q  <= cd_r;  vg_q <= cd_g;  vb_q <= cd_b;
         vhs_q <= cd_hs; vvs_q <= cd_vs; vde_q <= cd_de;
     end
     assign core_r  = vr_q;
@@ -1132,6 +1109,29 @@ module core_top
     assign video_preset = (aspect_sel == 2'd1) ? 3'd1 : 3'd0;
 
     //! ------------------------------------------------------------------
+    //! Cabinet reverb, and the audio clock domain crossing.
+    //!
+    //! The reverb is an option, not the board: a short dark room around the
+    //! whole mix, three feedback comb filters at 29.7 / 37.1 / 41.1 ms with a
+    //! one-pole low-pass in each loop (rtl/cloak_reverb.sv, ported from the
+    //! Punch-Out!! core). cloak_audio already delivers exactly one sample per
+    //! 48.08 kHz tick, so nothing needs decimating here -- the reverb takes
+    //! each sample on cd_audio_ce and settles nine clocks later, well inside
+    //! the ~832 clk_sys cycles before the next one.
+    //! Menu: Cabinet Reverb, off / light / medium / heavy.
+    //! ------------------------------------------------------------------
+    wire [1:0] reverb_mode = mod_sw0[4:3];
+    wire signed [15:0] cd_wet;
+    cloak_reverb pocket_reverb (
+        .clk   ( clk_sys            ),
+        .reset ( ~pll_core_locked_s ),
+        .ce    ( cd_audio_ce        ),
+        .mode  ( reverb_mode        ),
+        .in    ( cd_audio           ),
+        .out   ( cd_wet             )
+    );
+
+    //! ------------------------------------------------------------------
     //! Audio clock domain crossing (METHODOLOGY section 5.4).
     //!
     //! The machine runs on clk_sys; the Pocket's audio filter runs on a PLL
@@ -1144,8 +1144,8 @@ module core_top
     //!
     //! Decimation has already happened inside the core: cloak_audio averages 26
     //! POKEY clocks per output sample, which puts the anti-alias filter's nulls
-    //! on the output rate (48.08 kHz) and its multiples. So this only samples,
-    //! holds and hands over with a toggle flag.
+    //! on the output rate (48.08 kHz) and its multiples. So this only samples
+    //! the reverb's output, holds it, and hands it over with a toggle flag.
     //! ------------------------------------------------------------------
     logic signed [15:0] snd_hold = 16'sd0;
     logic               snd_tog  = 1'b0;
@@ -1155,7 +1155,7 @@ module core_top
         snd_div <= snd_div + 10'd1;
         if (snd_tick) begin
             snd_div  <= 10'd0;
-            snd_hold <= cd_audio;
+            snd_hold <= cd_wet;
             snd_tog  <= ~snd_tog;
         end
     end
@@ -1168,7 +1168,8 @@ module core_top
     assign core_snd_l = snd_xfer;
     assign core_snd_r = snd_xfer;
 
-    wire _unused_top = &{1'b0, cd_hb, cd_vb, status, ext_sw0, ext_sw1, ext_sw2, ext_sw3,
+    wire _unused_top = &{1'b0, cd_hb, cd_vb, status, nv_stat_s,
+                         dbg_main_addr, dbg_slave_addr, dbg_bm_busy, ext_sw0, ext_sw1, ext_sw2, ext_sw3,
                          dip_sw1, dip_sw2, dip_sw3, mod_sw1, mod_sw2, mod_sw3,
                          p1_btn_l2, p1_btn_l3, p1_btn_r2, p1_btn_r3, p1_select,
                          p2_up, p2_down, p2_left, p2_right, p2_btn_y, p2_btn_x,

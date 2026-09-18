@@ -56,5 +56,5 @@ verilator --lint-only -Wno-fatal -Wno-DECLFILENAME -Wno-WIDTHEXPAND -Wno-WIDTHTR
     obj_platform/stubs/core_pll.v obj_platform/stubs/mf_audio_pll.v obj_platform/stubs/megafunctions.v \
     $FILES ../target/pocket/core_top.sv \
     ../rtl/cloak_pkg.sv ../rtl/cloak_core.sv ../rtl/cloak_video.sv ../rtl/cloak_main.sv \
-    ../rtl/cloak_slave.sv ../rtl/cloak_audio.sv ../rtl/pokey.sv ../rtl/dbg_overlay.sv \
+    ../rtl/cloak_slave.sv ../rtl/cloak_audio.sv ../rtl/cloak_reverb.sv ../rtl/pokey.sv \
     ../modules/cpu-t65/gen/t65.v 2>&1 | grep -v "^ \|^$" | head -40
