@@ -4,6 +4,10 @@ What is checked, how, and what each check has actually caught. Per METHODOLOGY
 section 1: make the correct answer cheap to compute, then check against it
 constantly.
 
+**The core has been played on a real Analogue Pocket and works.** Everything
+below is the simulation and build evidence that got it there; hardware is the
+only thing that can settle whether a core is right, and it has.
+
 ---
 
 ## The gates
@@ -338,7 +342,7 @@ a Pocket:
 
 ### 8.5 What is still open
 
-Nothing has been listened to on hardware, and the output has not been checked
+The sound has been heard on a Pocket and is right, but it has never been checked
 against a recording of a real board -- only against MAME, which is a model of
 one. The RC network after the POKEYs is modelled as MAME models it, and MAME's
 own comment says it is an approximation of what the board does next.

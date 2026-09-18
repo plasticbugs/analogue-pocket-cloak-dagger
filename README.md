@@ -15,11 +15,11 @@ Nothing here is emulated in software.
 > **ROMs are not included and never will be.** You supply your own MAME
 > `cloak` romset; the core reads one image built from it.
 
-**Status: builds clean and every simulation gate is green; not yet run on real
-hardware.** Quartus 18.1 compiles it with 0 errors, fully constrained for
-setup and hold, no negative slack in any of its 104 timing checks — 20% of the
-ALMs, **50% of the block memory**, 12 DSP blocks. It has not been loaded onto a
-Pocket. See "Open questions" for what that leaves unsettled.
+**Status: played on a real Analogue Pocket and working.** Quartus 18.1 compiles
+it with 0 errors, fully constrained for setup and hold, no negative slack in any
+of its 104 timing checks — 20% of the ALMs, **50% of the block memory**, 12 DSP
+blocks — and every simulation gate below is green. See "Open questions" for what
+is still unsettled.
 
 |  |  |
 |---|---|
@@ -204,10 +204,11 @@ From [docs/verification.md](docs/verification.md) section 5, in full:
   Through the first 21 seconds, before the RNG reaches anything visible,
   34 of 43 frames are pixel-identical and the rest differ only in animation
   phase.
-* **The audio has been checked against MAME, not against a board.** MAME is
-  a model of the hardware, and its own comment says the RC network it puts
-  after the POKEYs is an approximation of what the board does next. Nothing
-  here has been listened to on real hardware.
+* **The audio has been measured against MAME, not against a board.** It has
+  been heard on a Pocket and sounds right, but MAME is a model of the hardware
+  and its own comment says the RC network it puts after the POKEYs is an
+  approximation of what the board does next. No A/B against a recording of a
+  real machine has been made.
 
 ## Repository layout
 
