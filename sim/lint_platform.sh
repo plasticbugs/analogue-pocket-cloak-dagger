@@ -4,6 +4,8 @@
 # instead of a twenty-minute Quartus run (METHODOLOGY section 8).
 # The PLL and the megafunctions have no simulation model here, so they are
 # stubbed; this checks connectivity, widths and declarations, not behaviour.
+# The Analogizer's vendored module (target/pocket/analogizer/) is kept as
+# upstream wrote it, so its warnings are dropped by path; its errors are not.
 cd "$(dirname "$0")"
 mkdir -p obj_platform/stubs
 cat > obj_platform/stubs/core_pll.v <<'STUB'
@@ -50,11 +52,14 @@ FILES=$(grep -E "SYSTEMVERILOG_FILE|VERILOG_FILE" ../projects/cloak_pocket.qsf \
         | grep -v "mf_audio_pll" )
 verilator --lint-only -Wno-fatal -Wno-DECLFILENAME -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC \
     -Wno-UNUSEDSIGNAL -Wno-UNDRIVEN -Wno-UNOPTFLAT -Wno-CASEINCOMPLETE -Wno-SYNCASYNCNET \
-    -Wno-MULTIDRIVEN -Wno-LATCH -Wno-PINMISSING -Wno-PINCONNECTEMPTY -Wno-TIMESCALEMOD -Wno-REALCVT -Wno-CONTASSREG -Wno-BLKSEQ -Wno-IMPLICITSTATIC -Wno-ASCRANGE \
+    -Wno-MULTIDRIVEN -Wno-LATCH -Wno-PINMISSING -Wno-PINCONNECTEMPTY -Wno-TIMESCALEMOD -Wno-REALCVT -Wno-CONTASSREG -Wno-BLKSEQ -Wno-IMPLICITSTATIC -Wno-ASCRANGE -Wno-PROCASSWIRE \
     +1364-2005ext+v waivers.vlt --top-module apf_top \
     -I../platform/pocket/interface -I../platform/pocket/memory \
     obj_platform/stubs/core_pll.v obj_platform/stubs/mf_audio_pll.v obj_platform/stubs/megafunctions.v \
     $FILES ../target/pocket/core_top.sv \
+    ../target/pocket/pocket_analogizer.sv ../target/pocket/analogizer/*.v \
+    ../target/pocket/analogizer/*.sv ps2_keyboard_stub.v \
     ../rtl/cloak_pkg.sv ../rtl/cloak_core.sv ../rtl/cloak_video.sv ../rtl/cloak_main.sv \
     ../rtl/cloak_slave.sv ../rtl/cloak_audio.sv ../rtl/cloak_reverb.sv ../rtl/pokey.sv \
-    ../modules/cpu-t65/gen/t65.v 2>&1 | grep -v "^ \|^$" | head -40
+    ../modules/cpu-t65/gen/t65.v 2>&1 | grep -v "^ \|^$" \
+    | grep -v "^%Warning[^ ]*: \.\./target/pocket/analogizer/" | head -40

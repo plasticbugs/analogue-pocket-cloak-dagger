@@ -96,9 +96,23 @@ presentations:
 | **Arcade 4:3** (default) | the cabinet's shape, black bars either side |
 | Fill Screen | stretched to reach both edges |
 
+## Analogizer
+
+The core supports RndMnkIII's [Analogizer](https://github.com/RndMnkIII/Analogizer)
+adapter: the board's own 15.625 kHz, 61.04 Hz picture out of the VGA port
+(RGBS, RGsB, YPbPr, Y/C, or scandoubled for a VGA monitor), and SNAC pads,
+which play the twin-stick controls the way the Pocket's buttons do. It is set
+up in the core's own menu (Analogizer, Analogizer Video, SNAC Adapter, SNAC
+Assignment, and H and V Position to centre the picture on the CRT); with
+"Analogizer" off, the default, the core is unchanged. Because the core
+declares a cartridge adapter, the Pocket powers the slot: take any game
+cartridge out first. [docs/analogizer.md](docs/analogizer.md) has the modes,
+the pad mapping and what has been checked: the path is proven in simulation;
+no Analogizer has been tried with this core yet.
+
 ## How it is verified
 
-Eight gates, seven of them against MAME 0.288 as the oracle, described in full in
+Nine gates, seven of them against MAME 0.288 as the oracle, described in full in
 [docs/verification.md](docs/verification.md):
 
 | gate | what it proves | cost |
@@ -111,6 +125,7 @@ Eight gates, seven of them against MAME 0.288 as the oracle, described in full i
 | `sim/run_audio.sh` | the whole machine's sound against a MAME recording of the same sequence | ~3 min |
 | `sim/run_gameplay.sh` | both machines through the same coin and start, diffed frame by frame | ~3 min |
 | `sim/lint.sh` / `sim/lint_platform.sh` | Verilator over the core, and over everything the Pocket builds | ~1 s |
+| `sim/run_analogizer.sh` | the Analogizer path at this raster, read at the cartridge pins: every dot, the menu, the scandoubler, the position sliders, SNAC (`docs/analogizer.md`) | ~1 min |
 
 All of them are green, and the video gates are at **zero differing pixels**, not
 "close": the reference renderer is pixel-identical to MAME on all 20 corpus
@@ -229,9 +244,10 @@ From [docs/verification.md](docs/verification.md) section 5, in full:
 | `METHODOLOGY.md` | the method this core and its siblings follow |
 | `rtl/` | the core: `cloak_core.sv` (clocking and top level), `cloak_main.sv` / `cloak_slave.sv` (the two 6502 buses), `cloak_video.sv` (playfield, bitmap, motion objects, palette), `cloak_audio.sv` (the op-amp output stage), `cloak_reverb.sv` (the optional cabinet reverb), `pokey.sv` |
 | `modules/` | the vendored T65 6502, see `modules/VENDOR.md` |
-| `target/pocket/core_top.sv` | Pocket integration: the 40 MHz PLL, pixel-sync, control mapping, the save slot |
+| `target/pocket/core_top.sv` | Pocket integration: the 40 MHz PLL, pixel-sync, control mapping, the save slot, the Analogizer |
+| `target/pocket/pocket_analogizer.sv`, `target/pocket/analogizer/` | the Analogizer: the wrapper from the pocket-core-template and RndMnkIII's module, verbatim (`docs/analogizer.md`) |
 | `platform/pocket/` | the OpenGateware Pocket framework (APF bridge, scaler, audio path, Interact decoding) |
-| `sim/` | Verilator benches: `run_video.sh`, `run_selftest.sh`, `run_system.sh`, `run_audio.sh`, `run_audio_unit.sh`, `lint.sh`, `lint_platform.sh` |
+| `sim/` | Verilator benches: `run_video.sh`, `run_selftest.sh`, `run_system.sh`, `run_audio.sh`, `run_audio_unit.sh`, `run_analogizer.sh`, `lint.sh`, `lint_platform.sh` |
 | `tools/` | `mra_build.py` (ROM image), `render_model.py` (reference renderer), `dump_state.lua` / `make_corpus.sh` (MAME capture), `capture_selftest.sh`, `capture_audio.sh`, `capture_title.sh` / `make_images.py` (Pocket artwork from the game's own raster) |
 | `cloak.mra` | the ROM recipe, the standard MRA format |
 | `ref/mame/` | the MAME sources this core was written from |
@@ -281,6 +297,11 @@ other people's work.
   unloader; **Jim Gregory** and **Alan Steremberg** — MAME hiscore/NVRAM
   support; **Till Harbaum** — the original scanline generator; **Analogue**
   — the openFPGA APF reference `core_top`.
+* **RndMnkIII** — the [Analogizer](https://github.com/RndMnkIII/Analogizer)
+  adapter and its openFPGA module, vendored verbatim in
+  `target/pocket/analogizer/`, with **Mike Simone**'s Y/C encoder, MiSTer's
+  scandoubler and HQ2x (**Sorgelig**, **Ludvig Strigeus**) and the SNAC
+  controller code it credits.
 * **MAME** as the oracle throughout — driven headless via the Lua scripts in
   `tools/` to dump frozen states, capture the self-test and the title
   screen, and record audio.

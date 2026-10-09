@@ -8,6 +8,7 @@ are kept alongside the sources.
 | module | upstream | commit |
 |---|---|---|
 | cpu-t65 | https://github.com/mist-devel/T65 (by way of the Punch-Out!!, S.T.U.N. Runner and Atari System 2 cores in this series) | vendored, unmodified |
+| `target/pocket/analogizer/` | RndMnkIII's openFPGA_Pocket_Analogizer 1.4, from https://github.com/RndMnkIII/MiraxPocket (commit 9dfdd2b) by way of the pocket-core-template | vendored, unmodified; only `analogizer.qip` is ours (the files used) |
 
 Cloak & Dagger has **two** 6502s -- a master at 1.0 MHz and a slave at 1.25 MHz
 that does nothing but draw into the bitmap -- and both are T65 instances

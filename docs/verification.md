@@ -20,7 +20,8 @@ only thing that can settle whether a core is right, and it has.
 | `sim/run_audio_unit.sh` | `cloak_audio`'s output level against MAME's own op-amp expression, plus the decimator and the DC blocker | ~4 s |
 | `sim/run_audio.sh` | the whole machine's sound against a MAME recording of the same sequence | ~3 min |
 | `sim/run_gameplay.sh` | both machines through the same coin and start, diffed frame by frame | ~3 min |
-| `sim/lint.sh` | Verilator over the whole core | ~1 s |
+| `sim/lint.sh` | Verilator over the whole core, and the Analogizer wrapper | ~1 s |
+| `sim/run_analogizer.sh` | the Analogizer path at this raster, read at the cartridge pins (`docs/analogizer.md`, "What was measured") | ~1 min |
 
 All four are green. The video gates are at **zero differing pixels**, not "close".
 
