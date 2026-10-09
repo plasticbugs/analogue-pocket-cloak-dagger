@@ -28,7 +28,7 @@ mix, an option, not the board.
 Analogizer: CRT video and SNAC pads,
 set in this core's menu (Analogizer:
 On; H and V Position centre the
-picture). The slot is powered: remove
+picture, H Size sets its width). The slot is powered: remove
 any cartridge first.
 
 ROMs are not included. Build it

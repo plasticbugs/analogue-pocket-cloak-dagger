@@ -30,14 +30,14 @@ So this checks the things the firmware cares about and a parser does not:
     whole image flickering;
   * the files are no larger than the largest this firmware is known to
     accept, because size is the one limit that cannot be read off the file,
-    and the menu no more entries than Analogue documents (more options
-    in the file than any core seen loading is a note, not a fault: Analogue
-    says list options do not count toward the limit);
+    interact.json has no more options than any core that loads (the
+    survey below), and the menu no more entries than Analogue documents;
   * a slider's defaultval lies between its min and max;
   * an Analogizer core's menu and package agree (docs/analogizer.md): its
     interact.json entries at 0xF7000000 each write only inside their
     mask, one of them sets the enable (bit 5), the picture-position
-    sliders at 0xF7000004/8 fit the 8 signed bits read, no data slot also writes
+    sliders at 0xF7000004/8 and the width slider at 0xF700000C fit the 8
+    signed bits read, no data slot also writes
     0xF7000000 (a file loaded there would overwrite the menu's word), and
     the cartridge port is powered.  Any of those wrong and the Pocket loads
     the core happily while the adapter stays dark or ignores the menu.
@@ -58,7 +58,8 @@ import sys
 #     variables      up to 14      option values   up to 0x00C00000
 #     bytes          up to 7,597   options a list  up to 16
 #     longest name   26            defaultval      0..3
-#     options in the whole file    up to 52
+#     options in the whole file    up to 52 then; 68 loads, 70 does not
+#                                  (measured since: HW_OPTS_MAX below)
 #
 # The 23 characters an earlier version of this file called a limit was a
 # guess, and wrong: OpenJazz ships a 26-character name and loads.
@@ -67,16 +68,9 @@ import sys
 # 16 UI entries from interact.json can be shown", and no more than 20
 # interact and data entries together.  The survey's 14 is only the most any
 # installed core happened to have.
-#
-# The same page says a list's options -- up to 16 of its own -- "don't count
-# toward the overall limit", so the survey's 52 options in a file is not a
-# fault, only the most seen loading on a real Pocket: a file past it is
-# reported as a note, so that a General Error on the first load of such a
-# file is recognised for what it might be.
 NAME_MAX = 26
 OPTS_MAX = 16
 SIZE_MAX = 7600
-TOTAL_OPTS_MAX = 52    # atarisy2's, the most of any core seen loading (a note)
 VARS_MAX = 16          # Analogue's documented limit
 ENTRIES_MAX = 20       # interact variables and data slots together
 
@@ -106,7 +100,6 @@ def main(argv):
         i += 1
     root = args[0] if args else 'pkg/pocket'
     bad = []
-    notes = []
     def fault(where, msg):
         bad.append(f'{where}: {msg}')
 
@@ -149,11 +142,6 @@ def main(argv):
             if len(v) + ns > ENTRIES_MAX:
                 fault(path, f'{len(v)} variables and {ns} data slots, more than '
                             f'the {ENTRIES_MAX} entries the Pocket allows together')
-            total = sum(len(x.get('options', [])) for x in v)
-            if total > TOTAL_OPTS_MAX:
-                notes.append(f'{path}: {total} options in the whole file, more than '
-                             f'the {TOTAL_OPTS_MAX} of any core seen loading (Analogue: '
-                             f'list options do not count toward the limit)')
             for x in v:
                 for val in ([o.get('value') for o in x.get('options', [])]
                             + [x.get('value')]):
@@ -282,15 +270,18 @@ def main(argv):
             a = str(v.get('address', '')).lower()
             if not a.startswith('0xf70000') or a == '0xf7000000':
                 continue
-            if a not in ('0xf7000004', '0xf7000008'):
+            if a not in ('0xf7000004', '0xf7000008', '0xf700000c'):
                 fault(ij, f'{v.get("name")!r} writes {v.get("address")}; the Analogizer '
-                          f'reads only 0xF7000000, 0xF7000004 and 0xF7000008')
+                          f'reads only 0xF7000000, 0xF7000004, 0xF7000008 and 0xF700000C')
                 continue
             g = v.get('graphical', {})
             if (v.get('type') != 'slider_u32' or not g.get('signed')
                     or not -127 <= g.get('min', 0) <= 0 <= g.get('max', 0) <= 127):
-                fault(ij, f'{v.get("name")!r}: a picture position is a signed slider '
-                          f'from -127..0 to 0..127 (pocket_analogizer reads 8 bits)')
+                fault(ij, f'{v.get("name")!r}: a picture position or width is a signed '
+                          f'slider from -127..0 to 0..127 (pocket_analogizer reads 8 bits)')
+            if a == '0xf700000c' and g.get('min', 0) < -50:
+                fault(ij, f'{v.get("name")!r}: a width below -50% would skip more than '
+                          f'every other dot')
         if ana and not enable:
             fault(ij, 'no Analogizer entry sets the enable (bit 5 of 0xF7000000): '
                       'the adapter would never turn on')
@@ -298,10 +289,28 @@ def main(argv):
             fault(cj, 'Analogizer menu present but cartridge_adapter is not 0: '
                       'the cartridge port is not powered')
 
+    # What the firmware refuses, measured on hardware (2026-10-09): with 16
+    # entries, 70 and 77 options in the whole menu stopped Atari System 2 and
+    # BBC Micro with "Error in interact" at core setup, while MSX2 loads with
+    # 68 options (80 with its entries) and Cadash and Cloak with 54.
+    # Analogue's docs say a list's options count toward no limit; on this
+    # firmware they do, somewhere above 68.
+    HW_OPTS_MAX, HW_OPTS_VARS_MAX = 68, 80
+    for path in files:
+        if os.path.basename(path) != 'interact.json':
+            continue
+        try:
+            hv = json.load(open(path))['interact'].get('variables', [])
+        except Exception:
+            continue
+        hn = sum(len(x.get('options', [])) for x in hv)
+        if hn > HW_OPTS_MAX or hn + len(hv) > HW_OPTS_VARS_MAX:
+            fault(path, f'{hn} options and {len(hv)} entries: the firmware refused '
+                        f'70 options (86 with entries) and loads 68 (80); keep to '
+                        f'{HW_OPTS_MAX} and {HW_OPTS_VARS_MAX}')
+
     for f in bad:
         print('  ' + f)
-    for n in notes:
-        print('  note: ' + n)
     print()
     if bad:
         print(f'{len(bad)} fault(s) the Pocket would refuse')

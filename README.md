@@ -72,9 +72,11 @@ gamepad, and the reason this game needs all four rather than the usual one.
 The igniter (the cabinet's own dedicated button, which lights the fuse) is on
 both triggers so whichever hand is free can reach it.
 
-DIP-switch equivalents — Credits, Coin A, Coin B, Demo Freeze Mode — plus the
-Self-Test switch, Screen Shape, a Clear Settings & Scores action, and two audio
-options are in the Pocket's Interact menu.
+DIP-switch equivalents — Credits, Coin A, Coin B — plus the Self-Test switch,
+Screen Shape, a Clear Settings & Scores action, and two audio options are in
+the Pocket's Interact menu. Demo Freeze Mode, a factory test switch, left the
+menu to make room for the Analogizer's H Size; it stays Off, the factory
+setting.
 
 **Cabinet Reverb** (off / light / medium / heavy) puts a short dark room around
 the whole mix: three feedback comb filters at 29.7, 37.1 and 41.1 ms with a
@@ -103,7 +105,8 @@ adapter: the board's own 15.625 kHz, 61.04 Hz picture out of the VGA port
 (RGBS, RGsB, YPbPr, Y/C, or scandoubled for a VGA monitor), and SNAC pads,
 which play the twin-stick controls the way the Pocket's buttons do. It is set
 up in the core's own menu (Analogizer, Analogizer Video, SNAC Adapter, SNAC
-Assignment, and H and V Position to centre the picture on the CRT); with
+Assignment, H and V Position to centre the picture on the CRT, and H Size
+for its width); with
 "Analogizer" off, the default, the core is unchanged. Because the core
 declares a cartridge adapter, the Pocket powers the slot: take any game
 cartridge out first. [docs/analogizer.md](docs/analogizer.md) has the modes,

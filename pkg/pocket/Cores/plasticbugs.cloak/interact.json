@@ -71,20 +71,6 @@
         ]
       },
       {
-        "name": "Demo Freeze Mode",
-        "id": 23,
-        "type": "list",
-        "enabled": true,
-        "persist": true,
-        "address": "0xF1000000",
-        "defaultval": 0,
-        "mask": "0xFFFFFFBF",
-        "options": [
-          {"name": "Off", "value": "0x00000000"},
-          {"name": "On", "value": "0x00000040"}
-        ]
-      },
-      {
         "name": "Self-Test Switch",
         "id": 30,
         "type": "list",
@@ -235,6 +221,16 @@
         "address": "0xF7000008",
         "defaultval": 0,
         "graphical": {"signed": true, "min": -16, "max": 3, "adjust_small": 1, "adjust_large": 4}
+      },
+      {
+        "name": "Analogizer H Size",
+        "id": 76,
+        "type": "slider_u32",
+        "enabled": true,
+        "persist": true,
+        "address": "0xF700000C",
+        "defaultval": 0,
+        "graphical": {"signed": true, "min": -20, "max": 4, "adjust_small": 1, "adjust_large": 5}
       }
     ]
   }
