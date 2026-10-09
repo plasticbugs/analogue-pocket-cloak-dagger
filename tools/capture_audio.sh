@@ -27,7 +27,11 @@ emu.register_frame_done(function()
   if n>=$FRAMES then m:exit() end
 end)
 LUA
-mame cloak -rompath "$PWD/build/roms" -video none -nothrottle -skip_gameinfo \
+# headless: never let MAME take the display (tools/mame_run.sh says why);
+# -wavwrite records the mix whatever the sound output is.
+SDL_VIDEODRIVER=dummy \
+mame cloak -rompath "$PWD/build/roms" -video none -videodriver dummy -window -nomaximize \
+    -sound none -nothrottle -skip_gameinfo \
     -cfg_directory "$SCR/cfg" -nvram_directory "$SCR/nvram" \
     -samplerate 48000 -wavwrite artifacts/audio/mame_play.wav \
     -autoboot_script "$SCR.lua" -seconds_to_run "$SECS" 2>&1 | tail -2

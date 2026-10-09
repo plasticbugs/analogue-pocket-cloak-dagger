@@ -7,4 +7,4 @@ SRC=${1:-cloak_mame}
 mkdir -p build/roms
 rm -f build/roms/cloak.zip
 (cd "$SRC" && zip -q -j "$OLDPWD/build/roms/cloak.zip" *.bin *.3n)
-mame cloak -rompath "$PWD/build/roms" -verifyroms
+SDL_VIDEODRIVER=dummy mame cloak -rompath "$PWD/build/roms" -verifyroms
