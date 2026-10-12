@@ -110,8 +110,8 @@ for its width); with
 "Analogizer" off, the default, the core is unchanged. Because the core
 declares a cartridge adapter, the Pocket powers the slot: take any game
 cartridge out first. [docs/analogizer.md](docs/analogizer.md) has the modes,
-the pad mapping and what has been checked: the path is proven in simulation;
-no Analogizer has been tried with this core yet.
+the pad mapping and what has been checked. Confirmed on a Pocket with an
+Analogizer and a CRT (0.2.0).
 
 ## How it is verified
 

@@ -118,7 +118,7 @@ before it and 17 after, so +3 and -16 each leave a line.
 so the Pocket powers the slot whether or not an Analogizer is in it. Do not
 leave a game cartridge in the slot while this core runs.
 
-Not yet tried on an Analogizer with this core. What the bench proves is
+Confirmed on a Pocket with an Analogizer and a CRT (0.2.0). What the bench proves is
 listed under *What was measured* below. Send problems with
 the adapter itself to the Analogizer project.
 

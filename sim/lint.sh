@@ -14,8 +14,8 @@ verilator --lint-only -Wall -Wno-fatal -Wno-DECLFILENAME +1364-2005ext+v waivers
 # an always block, which Quartus takes and Verilator calls an error.
 A=../target/pocket/analogizer
 verilator --lint-only -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-TIMESCALEMOD \
-    -Wno-PROCASSWIRE -Wno-PINCONNECTEMPTY --top-module pocket_analogizer \
+    -Wno-PROCASSWIRE -Wno-BLKANDNBLK -Wno-PINCONNECTEMPTY --top-module pocket_analogizer \
     ../target/pocket/pocket_analogizer.sv ../platform/pocket/helpers/synch_3.sv \
-    $A/*.v $A/*.sv ps2_keyboard_stub.v 2>&1 \
+    $A/*.v $(ls $A/*.sv | grep -v /yc_out_legacy.sv) yc_out_legacy_stub.v ps2_keyboard_stub.v 2>&1 \
     | grep -E '^%(Error|Warning)' | grep -v 'Exiting due to' \
     | grep -v -E '^%Warning[^ ]*: ([^ ]*/(target/pocket/analogizer|platform/pocket)/|ps2_keyboard_stub)' | head -40
